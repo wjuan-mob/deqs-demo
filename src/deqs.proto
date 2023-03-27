@@ -1,0 +1,120 @@
+// Copyright (c) 2018-2022 The MobileCoin Foundation
+
+// API for decentralized quoting service (DEQS)
+
+syntax = "proto3";
+
+package deqs;
+option java_package = "com.mobilecoin.api";
+option go_package = "mobilecoin/api";
+
+import "src/external.proto";
+
+service DeqsClientAPI {
+    /// This is called to submit a new quote
+    rpc SubmitQuotes(SubmitQuotesRequest) returns (SubmitQuotesResponse) {}
+
+    /// This is called to get the existing quotes
+    rpc GetQuotes(GetQuotesRequest) returns (GetQuotesResponse) {}
+
+    /// Subscribe for live updates to the quote book
+    rpc LiveUpdates(LiveUpdatesRequest) returns (stream LiveUpdate);
+}
+
+message SubmitQuotesRequest {
+    /// One or more quotes to submit
+    repeated external.SignedContingentInput quotes = 1;
+}
+
+message SubmitQuotesResponse {
+    /// The status of each submission
+    repeated QuoteStatusCode status_codes = 1;
+
+    /// String error messages for each case where status code is not CREATED
+    repeated string error_messages = 2;
+
+    /// Quotes - the contents will depend on the status code:
+    /// - CREATED: Contains the newly created quote
+    /// - QUOTE_ALREADY_EXISTS: Contains the existing quote
+    repeated Quote quotes = 3;
+}
+
+/// The status that a quote can have upon submission
+///
+/// (Should there be a status code here for each way a SignedContingentInput can be invalid?)
+enum QuoteStatusCode {
+    CREATED = 0;
+    INVALID_SCI = 1;
+    UNSUPPORTED_SCI = 2;
+    QUOTE_ALREADY_EXISTS = 3;
+    QUOTE_IS_STALE = 4;
+    OTHER = 5;
+}
+
+message GetQuotesRequest {
+    /// Pair we want to get quotes for.
+    Pair pair = 1;
+
+    /// Range of base tokens we are interested in. Quotes that have an overlapping range will be returned.
+    uint64 base_range_min = 2;
+    uint64 base_range_max = 3;
+
+    /// Maximum number of quotes to return.
+    uint64 limit = 4;
+}
+
+message GetQuotesResponse {
+    repeated Quote quotes = 1;
+}
+
+message LiveUpdatesRequest {
+    /// Pair we want to get live updates for.
+    /// Optional, when pair.base_token_id and pair.counter_token_id are both 0, all pairs are returned.
+    Pair pair = 1;
+}
+
+message LiveUpdate {
+    oneof update {
+        Quote quote_added = 1;
+        QuoteId quote_removed = 2;
+    }
+}
+
+/// Quote Unique Identifier.
+message QuoteId {
+    bytes data = 1;
+}
+
+/// Single trading pair.
+message Pair {
+    /// The token id being offered "for sale".
+    uint64 base_token_id = 1;
+
+    /// The token id that needs to be paid to satisfy the offering.
+    /// (The SCI is "priced" with this token id)
+    uint64 counter_token_id = 2;
+}
+
+/// A single quote in the quote book.
+/// See deqs_quote_book::Quote
+message Quote {
+    external.SignedContingentInput sci = 1;
+    QuoteId id = 2;
+    Pair pair = 3;
+    uint64 base_range_min = 4;
+    uint64 base_range_max = 5;
+    uint64 max_counter_tokens = 6;
+    uint64 timestamp = 7;
+}
+
+message PingRequest {
+    string ping = 1;
+}
+
+message PongResponse {
+    string pong = 1;
+}
+
+service PingPong {
+    rpc Ping(PingRequest) returns (PongResponse);
+}
