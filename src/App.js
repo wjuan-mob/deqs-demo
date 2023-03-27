@@ -18,7 +18,7 @@ import React, { Component } from 'react';
 	    request.setPing('Ping');
 	
 
-	    client.Ping(request, {}, (err, response) => {
+	    client.ping(request, {}, (err, response) => {
 	      if (response == null) {
 	        console.log(err)
 	      }else {
