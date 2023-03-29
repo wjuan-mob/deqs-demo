@@ -14,7 +14,7 @@ const enableDevTools = window.__GRPCWEB_DEVTOOLS__ || (() => {
 var client = new DeqsClientAPIClient('http://localhost:9090', null, null);
 
 function QuoteList() {
-    const [quoteIds, setQuoteIds] = useState({});
+    const [quotes, setQuotes] = useState([]);
 
     const handleGetQuotes = () => {
         const request = new GetQuotesRequest();
@@ -25,27 +25,39 @@ function QuoteList() {
         request.setBaseRangeMin(1);
         request.setBaseRangeMax(1000000);
         request.setLimit(100);
-        console.log(request)
+
         client.getQuotes(request, {}, (err, response) => {
             if (err) {
                 console.error(err);
                 return;
             }
-            console.log(response.toObject());
+
             const quotesList = response.getQuotesList();
-            const groupedQuoteIds = quotesList.reduce((acc, quote) => {
+            const quotesData = quotesList.map((quote) => {
                 const pair = quote.getPair();
+                const id = quote.getId().toString();
+                const blockVersion = quote.getSci().getBlockVersion();
+                const requiredOutputAmounts = quote.getSci().getRequiredOutputAmountsList().map((amount) => {
+                    return {
+                        amount: amount.getValue(),
+                        tokenId: amount.getTokenId(),
+                    };
+                });
+                const pseudoOutputAmount = {
+                    amount: quote.getSci().getPseudoOutputAmount().getValue(),
+                    tokenId: quote.getSci().getPseudoOutputAmount().getTokenId(),
+                };
 
-                if (!acc[pair]) {
-                    acc[pair] = [];
-                }
+                return {
+                    id,
+                    pair,
+                    blockVersion,
+                    requiredOutputAmounts,
+                    pseudoOutputAmount,
+                };
+            });
 
-                acc[pair].push(quote.getId().toString());
-
-                return acc;
-            }, {});
-
-            setQuoteIds(groupedQuoteIds);
+            setQuotes(quotesData);
         });
     };
 
@@ -53,17 +65,29 @@ function QuoteList() {
         <div>
             <button onClick={handleGetQuotes}>Get Quotes</button>
             <ul>
-                {Object.entries(quoteIds).map(([pair, quoteIds]) => (
-                    <li key={pair}>
-                        {pair}
+                {quotes.map((quote) => (
+                    <li key={quote.id.toString()}>
+                        Quote ID: {quote.id.toString()}<br />
+                        Pair: {quote.pair.toString()}<br />
+                        Block Version: {quote.blockVersion}<br />
+                        Required Output Amounts: <br />
                         <ul>
-                            {quoteIds.map(quoteId => (
-                                <li key={quoteId}>{quoteId}</li>
+                            {quote.requiredOutputAmounts.map((amount, index) => (
+                                <li key={index}>
+                                    Amount: {amount.amount}<br />
+                                    Token Id: {amount.tokenId}<br />
+                                </li>
                             ))}
+                        </ul>
+                        Pseudo Output Amount: <br />
+                        <ul>
+                            <li>
+                                Amount: {quote.pseudoOutputAmount.amount}<br />
+                                Token Id: {quote.pseudoOutputAmount.tokenId}<br />
+                            </li>
                         </ul>
                     </li>
                 ))}
-
             </ul>
         </div>
     );
