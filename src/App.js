@@ -1,6 +1,6 @@
 import React, { Component, useState } from 'react';
 import logo from './logo.svg';
-import './App.css';
+// import './App.css';
 
 const { DeqsClientAPIClient } = require('./deqs_grpc_web_pb.js');
 const { Pair, GetQuotesRequest, GetQuotesResponse, Quote } = require('./deqs_pb.js');

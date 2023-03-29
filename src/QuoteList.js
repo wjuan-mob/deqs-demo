@@ -13,6 +13,15 @@ const enableDevTools = window.__GRPCWEB_DEVTOOLS__ || (() => {
 
 var client = new DeqsClientAPIClient('http://localhost:9090', null, null);
 
+const quoteIdStyle = {
+    margin: '10px 0',
+    padding: '10px',
+    backgroundColor: '#f2f2f2'
+}
+
+const quoteItemStyle = {
+    fontWeight: 'bold'
+}
 function QuoteList() {
     const [quotes, setQuotes] = useState([]);
 
@@ -66,17 +75,16 @@ function QuoteList() {
             <button onClick={handleGetQuotes}>Get Quotes</button>
             <ul>
                 {quotes.map((quote) => (
-                    <li key={quote.id.toString()}>
-                        Quote ID: {quote.id.toString()}<br />
-                        Pair: {quote.pair.toString()}<br />
-                        Block Version: {quote.blockVersion}<br />
-                        Required Output Amounts: <br />
+                    <li key={quote.id.toString()} style={quoteIdStyle}>
+                        <span style={quoteItemStyle}> Quote ID: </span>  {quote.id.toString()}<br />
+                        <span style={quoteItemStyle}>Pair:</span> {quote.pair.toString()}<br />
+                        <span style={quoteItemStyle}>Block Version:</span> {quote.blockVersion}<br />
+                        <span style={quoteItemStyle}>Required Output Amounts:</span> <br />
                         <ul>
                             {quote.requiredOutputAmounts.map((amount, index) => (
                                 <li key={index}>
-                                    Amount: {amount.amount}<br />
-                                    Token Id: {amount.tokenId}<br />
-                                </li>
+                                    <span style={quoteItemStyle}>Amount:</span> {amount.amount}<br />
+                                    <span style={quoteItemStyle}>Token Id:</span> {amount.tokenId}<br />                                </li>
                             ))}
                         </ul>
                         Pseudo Output Amount: <br />
