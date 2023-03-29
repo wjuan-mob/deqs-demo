@@ -1,20 +1,22 @@
-// source: src/deqs.proto
+// source: deqs.proto
 /**
  * @fileoverview
  * @enhanceable
+ * @suppress {missingRequire} reports error on implicit type usages.
  * @suppress {messageConventions} JS Compiler reports an error if a variable or
  *     field starts with 'MSG_' and isn't a translatable message.
  * @public
  */
-/* eslint-disable */
 // GENERATED CODE -- DO NOT EDIT!
+/* eslint-disable */
+// @ts-nocheck
 
 var jspb = require('google-protobuf');
 var goog = jspb;
 var global = Function('return this')();
 
-var src_external_pb = require('../src/external_pb.js');
-goog.object.extend(proto, src_external_pb);
+var external_pb = require('./external_pb.js');
+goog.object.extend(proto, external_pb);
 goog.exportSymbol('proto.deqs.GetQuotesRequest', null, global);
 goog.exportSymbol('proto.deqs.GetQuotesResponse', null, global);
 goog.exportSymbol('proto.deqs.LiveUpdate', null, global);
@@ -299,7 +301,7 @@ proto.deqs.SubmitQuotesRequest.prototype.toObject = function(opt_includeInstance
 proto.deqs.SubmitQuotesRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
     quotesList: jspb.Message.toObjectList(msg.getQuotesList(),
-    src_external_pb.SignedContingentInput.toObject, includeInstance)
+    external_pb.SignedContingentInput.toObject, includeInstance)
   };
 
   if (includeInstance) {
@@ -337,8 +339,8 @@ proto.deqs.SubmitQuotesRequest.deserializeBinaryFromReader = function(msg, reade
     var field = reader.getFieldNumber();
     switch (field) {
     case 1:
-      var value = new src_external_pb.SignedContingentInput;
-      reader.readMessage(value,src_external_pb.SignedContingentInput.deserializeBinaryFromReader);
+      var value = new external_pb.SignedContingentInput;
+      reader.readMessage(value,external_pb.SignedContingentInput.deserializeBinaryFromReader);
       msg.addQuotes(value);
       break;
     default:
@@ -375,7 +377,7 @@ proto.deqs.SubmitQuotesRequest.serializeBinaryToWriter = function(message, write
     writer.writeRepeatedMessage(
       1,
       f,
-      src_external_pb.SignedContingentInput.serializeBinaryToWriter
+      external_pb.SignedContingentInput.serializeBinaryToWriter
     );
   }
 };
@@ -387,7 +389,7 @@ proto.deqs.SubmitQuotesRequest.serializeBinaryToWriter = function(message, write
  */
 proto.deqs.SubmitQuotesRequest.prototype.getQuotesList = function() {
   return /** @type{!Array<!proto.external.SignedContingentInput>} */ (
-    jspb.Message.getRepeatedWrapperField(this, src_external_pb.SignedContingentInput, 1));
+    jspb.Message.getRepeatedWrapperField(this, external_pb.SignedContingentInput, 1));
 };
 
 
@@ -499,8 +501,10 @@ proto.deqs.SubmitQuotesResponse.deserializeBinaryFromReader = function(msg, read
     var field = reader.getFieldNumber();
     switch (field) {
     case 1:
-      var value = /** @type {!Array<!proto.deqs.QuoteStatusCode>} */ (reader.readPackedEnum());
-      msg.setStatusCodesList(value);
+      var values = /** @type {!Array<!proto.deqs.QuoteStatusCode>} */ (reader.isDelimited() ? reader.readPackedEnum() : [reader.readEnum()]);
+      for (var i = 0; i < values.length; i++) {
+        msg.addStatusCodes(values[i]);
+      }
       break;
     case 2:
       var value = /** @type {string} */ (reader.readString());
@@ -1803,7 +1807,7 @@ proto.deqs.Quote.prototype.toObject = function(opt_includeInstance) {
  */
 proto.deqs.Quote.toObject = function(includeInstance, msg) {
   var f, obj = {
-    sci: (f = msg.getSci()) && src_external_pb.SignedContingentInput.toObject(includeInstance, f),
+    sci: (f = msg.getSci()) && external_pb.SignedContingentInput.toObject(includeInstance, f),
     id: (f = msg.getId()) && proto.deqs.QuoteId.toObject(includeInstance, f),
     pair: (f = msg.getPair()) && proto.deqs.Pair.toObject(includeInstance, f),
     baseRangeMin: jspb.Message.getFieldWithDefault(msg, 4, 0),
@@ -1847,8 +1851,8 @@ proto.deqs.Quote.deserializeBinaryFromReader = function(msg, reader) {
     var field = reader.getFieldNumber();
     switch (field) {
     case 1:
-      var value = new src_external_pb.SignedContingentInput;
-      reader.readMessage(value,src_external_pb.SignedContingentInput.deserializeBinaryFromReader);
+      var value = new external_pb.SignedContingentInput;
+      reader.readMessage(value,external_pb.SignedContingentInput.deserializeBinaryFromReader);
       msg.setSci(value);
       break;
     case 2:
@@ -1911,7 +1915,7 @@ proto.deqs.Quote.serializeBinaryToWriter = function(message, writer) {
     writer.writeMessage(
       1,
       f,
-      src_external_pb.SignedContingentInput.serializeBinaryToWriter
+      external_pb.SignedContingentInput.serializeBinaryToWriter
     );
   }
   f = message.getId();
@@ -1967,7 +1971,7 @@ proto.deqs.Quote.serializeBinaryToWriter = function(message, writer) {
  */
 proto.deqs.Quote.prototype.getSci = function() {
   return /** @type{?proto.external.SignedContingentInput} */ (
-    jspb.Message.getWrapperField(this, src_external_pb.SignedContingentInput, 1));
+    jspb.Message.getWrapperField(this, external_pb.SignedContingentInput, 1));
 };
 
 

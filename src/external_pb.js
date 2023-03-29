@@ -1,13 +1,15 @@
-// source: src/external.proto
+// source: external.proto
 /**
  * @fileoverview
  * @enhanceable
+ * @suppress {missingRequire} reports error on implicit type usages.
  * @suppress {messageConventions} JS Compiler reports an error if a variable or
  *     field starts with 'MSG_' and isn't a translatable message.
  * @public
  */
-/* eslint-disable */
 // GENERATED CODE -- DO NOT EDIT!
+/* eslint-disable */
+// @ts-nocheck
 
 var jspb = require('google-protobuf');
 var goog = jspb;
@@ -6821,12 +6823,16 @@ proto.external.SignatureRctBulletproofs.deserializeBinaryFromReader = function(m
       msg.addRangeProofs(value);
       break;
     case 5:
-      var value = /** @type {!Array<number>} */ (reader.readPackedFixed64());
-      msg.setPseudoOutputTokenIdsList(value);
+      var values = /** @type {!Array<number>} */ (reader.isDelimited() ? reader.readPackedFixed64() : [reader.readFixed64()]);
+      for (var i = 0; i < values.length; i++) {
+        msg.addPseudoOutputTokenIds(values[i]);
+      }
       break;
     case 6:
-      var value = /** @type {!Array<number>} */ (reader.readPackedFixed64());
-      msg.setOutputTokenIdsList(value);
+      var values = /** @type {!Array<number>} */ (reader.isDelimited() ? reader.readPackedFixed64() : [reader.readFixed64()]);
+      for (var i = 0; i < values.length; i++) {
+        msg.addOutputTokenIds(values[i]);
+      }
       break;
     default:
       reader.skipField();
@@ -10178,8 +10184,10 @@ proto.external.SignedContingentInput.deserializeBinaryFromReader = function(msg,
       msg.addRequiredOutputAmounts(value);
       break;
     case 6:
-      var value = /** @type {!Array<number>} */ (reader.readPackedFixed64());
-      msg.setTxOutGlobalIndicesList(value);
+      var values = /** @type {!Array<number>} */ (reader.isDelimited() ? reader.readPackedFixed64() : [reader.readFixed64()]);
+      for (var i = 0; i < values.length; i++) {
+        msg.addTxOutGlobalIndices(values[i]);
+      }
       break;
     default:
       reader.skipField();
@@ -12730,12 +12738,16 @@ proto.external.SigningData.deserializeBinaryFromReader = function(msg, reader) {
       msg.addRangeProofs(value);
       break;
     case 6:
-      var value = /** @type {!Array<number>} */ (reader.readPackedFixed64());
-      msg.setPseudoOutputTokenIdsList(value);
+      var values = /** @type {!Array<number>} */ (reader.isDelimited() ? reader.readPackedFixed64() : [reader.readFixed64()]);
+      for (var i = 0; i < values.length; i++) {
+        msg.addPseudoOutputTokenIds(values[i]);
+      }
       break;
     case 7:
-      var value = /** @type {!Array<number>} */ (reader.readPackedFixed64());
-      msg.setOutputTokenIdsList(value);
+      var values = /** @type {!Array<number>} */ (reader.isDelimited() ? reader.readPackedFixed64() : [reader.readFixed64()]);
+      for (var i = 0; i < values.length; i++) {
+        msg.addOutputTokenIds(values[i]);
+      }
       break;
     default:
       reader.skipField();

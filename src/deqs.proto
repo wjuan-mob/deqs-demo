@@ -8,7 +8,7 @@ package deqs;
 option java_package = "com.mobilecoin.api";
 option go_package = "mobilecoin/api";
 
-import "src/external.proto";
+import "external.proto";
 
 service DeqsClientAPI {
     /// This is called to submit a new quote
@@ -116,5 +116,5 @@ message PongResponse {
 }
 
 service PingPong {
-    rpc Ping(PingRequest) returns (PongResponse);
+    rpc Ping(PingRequest) returns (Quote);
 }
