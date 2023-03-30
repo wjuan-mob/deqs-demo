@@ -1,7 +1,8 @@
-FROM envoyproxy/envoy:v1.19.1
+FROM envoyproxy/envoy:v1.11.2
 
-COPY envoy.yaml /etc/envoy/envoy.yaml
+COPY ./envoy.yaml /etc/envoy/envoy.yaml
 
-EXPOSE 8080 9901
+CMD /usr/local/bin/envoy -c /etc/envoy/envoy.yaml -l trace --log-path /tmp/envoy_info.log
 
-CMD /usr/local/bin/envoy -c /etc/envoy/envoy.yaml
+# docker build -t learn-grpc-web3 .
+# docker run -d --name learn-grpc-web -p 9090:9090 -p 9901:9901 learn-grpc-web3
