@@ -1,0 +1,12 @@
+{
+    "pairs": [
+        {
+            "base_token_id": 1,
+            "counter_token_id": 2
+        },
+        {
+            "base_token_id": 0,
+            "counter_token_id": 1
+        }
+    ]
+}
