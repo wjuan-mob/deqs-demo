@@ -135,80 +135,60 @@ const combineQuotesIntoBuckets = (values, quotes) => {
 
 const sortQuotesByQuantity = (quotes) => {
     return quotes.sort((quote1, quote2) => {
-      if (quote1.quantity < quote2.quantity) {
-        return -1;
-      } else if (quote1.quantity > quote2.quantity) {
-        return 1;
-      } else {
-        return 0;
-      }
+        if (quote1.quantity < quote2.quantity) {
+            return -1;
+        } else if (quote1.quantity > quote2.quantity) {
+            return 1;
+        } else {
+            return 0;
+        }
     });
-  };
-  
-
-
-const groupQuotesByPair = (items) => {
-    const pairsMap = {};
-
-    // Loop through each quote and group it by its pair elements
-    items.forEach((quote) => {
-        const pair = JSON.stringify(quote.pairs.sort());
-        pairsMap[pair] = pairsMap[pair] || [];
-        pairsMap[pair].push(quote);
-    });
-
-    // Convert the map to an array of grouped quotes
-    const groupedQuotes = Object.values(pairsMap);
-
-    return groupedQuotes;
 };
 
-const selectQuotesForDesiredAmount = (quotes, desiredAmount) => {
-    const sortedQuotes = quotes.sort((a, b) => {
-      const aRatio = a.requiredOutputAmounts / a.pseudoOutputAmount;
-      const bRatio = b.requiredOutputAmounts / b.pseudoOutputAmount;
-      return aRatio - bRatio;
-    });
-  
-    let selectedQuotes = [];
-    let currentPseudoOutput = 0;
-    let currentOutputAmount = 0;
-  
-    for (const quote of sortedQuotes) {
-      if (currentPseudoOutput >= desiredAmount) break;
-  
-      const quotePseudoOutput = quote.pseudoOutputAmount;
-      const quoteOutputAmount = quote.requiredOutputAmounts;
-      const quoteRatio = quoteOutputAmount / quotePseudoOutput;
-  
-      if (currentPseudoOutput + quotePseudoOutput <= desiredAmount) {
-        currentPseudoOutput += quotePseudoOutput;
-        currentOutputAmount += quoteOutputAmount;
-        selectedQuotes.push(quote);
-      } else {
-        const remainingPseudoOutput = desiredAmount - currentPseudoOutput;
-        const remainingOutputAmount = remainingPseudoOutput * quoteRatio;
-  
-        const proratedQuote = {
-          ...quote,
-          requiredOutputAmounts: remainingOutputAmount,
-          pseudoOutputAmount: remainingPseudoOutput,
-        };
-  
-        currentPseudoOutput += remainingPseudoOutput;
-        currentOutputAmount += remainingOutputAmount;
-        selectedQuotes.push(proratedQuote);
-      }
+
+const selectQuotesForDesiredAmount = (desiredAmount, quotes) => {
+    if (desiredAmount === 0) {
+        const sortedQuotes = quotes.sort((a, b) => a.requiredOutputAmounts[0] / a.pseudoOutputAmount - b.requiredOutputAmounts[0] / b.pseudoOutputAmount);
+        return [sortedQuotes[0], sortedQuotes[0].requiredOutputAmounts[0] / sortedQuotes[0].pseudoOutputAmount];
     }
-  
-    const usedRatio = currentOutputAmount / currentPseudoOutput;
-    return { selectedQuotes, usedRatio };
-  };
-  
-  const selectQuotesForAllAmounts = (amounts, quotes) => {
+
+    const sortedQuotes = quotes.sort((a, b) => a.requiredOutputAmounts[0] / a.pseudoOutputAmount - b.requiredOutputAmounts[0] / b.pseudoOutputAmount);
+
+    let selectedQuotes = [];
+    let selectedPseudoOutputAmount = 0;
+
+    for (const quote of sortedQuotes) {
+        const quoteRatio = quote.requiredOutputAmounts[0] / quote.pseudoOutputAmount;
+
+        if (selectedPseudoOutputAmount + quote.pseudoOutputAmount <= desiredAmount) {
+            selectedQuotes.push(quote);
+            selectedPseudoOutputAmount += quote.pseudoOutputAmount;
+        } else {
+            const remainingPseudoOutputAmount = desiredAmount - selectedPseudoOutputAmount;
+            const selectedQuoteRatio = quote.requiredOutputAmounts[0] / quote.pseudoOutputAmount;
+            const proratedRequiredOutputAmount = selectedQuoteRatio * remainingPseudoOutputAmount;
+            const proratedQuote = {
+                ...quote,
+                requiredOutputAmounts: [proratedRequiredOutputAmount],
+                pseudoOutputAmount: remainingPseudoOutputAmount,
+            };
+            selectedQuotes.push(proratedQuote);
+            break;
+        }
+    }
+
+    const selectedRatio = selectedQuotes.reduce((total, quote) => {
+        return total + quote.requiredOutputAmounts[0] / quote.pseudoOutputAmount;
+    }, 0) / selectedQuotes.length;
+
+    return [selectedQuotes, selectedRatio];
+};
+
+
+const selectQuotesForAllAmounts = (amounts, quotes) => {
     return amounts.map(amount => selectQuotesForDesiredAmount(amount, quotes));
-  };
-  
+};
+
 
 const groupBy = (items, key) => {
     return items.reduce((result, item) => {
@@ -309,71 +289,84 @@ export function ItemList({ items }) {
 };
 
 
+function buildGetQuotesRequests() {
+    const limit = 100;
+    const requests = [];
+    currency_config.pairs.forEach((config_pair) => {
+        const request = new GetQuotesRequest();
+        const pair = new Pair();
+        const baseTokenId = config_pair.base_token_id;
+        const counterTokenId = config_pair.counter_token_id;
+        pair.setBaseTokenId(baseTokenId);
+        pair.setCounterTokenId(counterTokenId);
+        request.setPair(pair);
+        request.setBaseRangeMin(1);
+        request.setBaseRangeMax(1000000);
+        request.setLimit(limit);
+        requests.push({ request, baseTokenId, counterTokenId });
+    });
+    return requests;
+}
+
+function handleGetQuotesResponse(response, setQuotes, countRef) {
+    const quotesData = [];
+    const quotesList = response.getQuotesList();
+    quotesList.forEach((quote) => {
+        const id = quote.getId().toString();
+        const pair = quote.getPair();
+        const baseTokenId = pair.base_token_id;
+        const counterTokenId = pair.counter_token_id;
+        const blockVersion = quote.getSci().getBlockVersion();
+        const requiredOutputAmounts = quote
+            .getSci()
+            .getRequiredOutputAmountsList()
+            .map((amount) => {
+                return {
+                    amount: amount.getValue(),
+                    tokenId: amount.getTokenId(),
+                };
+            });
+        const pseudoOutputAmount = {
+            amount: quote.getSci().getPseudoOutputAmount().getValue(),
+            tokenId: quote.getSci().getPseudoOutputAmount().getTokenId(),
+        };
+
+        const quoteData = {
+            id,
+            pair: { baseTokenId, counterTokenId },
+            blockVersion,
+            requiredOutputAmounts,
+            pseudoOutputAmount,
+        };
+
+        quotesData.push(quoteData);
+    });
+
+    setQuotes(quotesData);
+    countRef.current++; // Increment the count
+}
+
+function sendGetQuotesRequests(client, requests, setQuotes, countRef) {
+    requests.forEach(({ request, baseTokenId, counterTokenId }) => {
+        client.getQuotes(request, {}, (err, response) => {
+            if (err) {
+                console.error(err);
+                return;
+            }
+            console.log("received:" + response);
+            handleGetQuotesResponse(response, setQuotes, countRef);
+        });
+    });
+}
+
 function QuoteList() {
     const [quotes, setQuotes] = useState([]);
     const [intervalId, setIntervalId] = useState(null);
     const countRef = useRef(0);
 
     const handleGetQuotes = () => {
-        const limit = 100;
-        const requests = [];
-        const quotesData = [];
-        console.log("Count" + countRef.current);
-        currency_config.pairs.forEach((config_pair) => {
-            const request = new GetQuotesRequest();
-            const pair = new Pair();
-            const baseTokenId = config_pair.base_token_id;
-            const counterTokenId = config_pair.counter_token_id;
-            pair.setBaseTokenId(baseTokenId);
-            pair.setCounterTokenId(counterTokenId);
-            request.setPair(pair);
-            request.setBaseRangeMin(1);
-            request.setBaseRangeMax(1000000);
-            request.setLimit(limit);
-            requests.push({ request, baseTokenId, counterTokenId });
-        });
-
-        requests.forEach(({ request, baseTokenId, counterTokenId }) => {
-            client.getQuotes(request, {}, (err, response) => {
-                if (err) {
-                    console.error(err);
-                    return;
-                }
-                console.log("received:" + response);
-                const quotesList = response.getQuotesList();
-
-                quotesList.forEach((quote) => {
-                    const id = quote.getId().toString();
-                    const blockVersion = quote.getSci().getBlockVersion();
-                    const requiredOutputAmounts = quote
-                        .getSci()
-                        .getRequiredOutputAmountsList()
-                        .map((amount) => {
-                            return {
-                                amount: amount.getValue(),
-                                tokenId: amount.getTokenId(),
-                            };
-                        });
-                    const pseudoOutputAmount = {
-                        amount: quote.getSci().getPseudoOutputAmount().getValue(),
-                        tokenId: quote.getSci().getPseudoOutputAmount().getTokenId(),
-                    };
-
-                    const quoteData = {
-                        id,
-                        pair: { baseTokenId, counterTokenId },
-                        blockVersion,
-                        requiredOutputAmounts,
-                        pseudoOutputAmount,
-                    };
-
-                    quotesData.push(quoteData);
-                });
-
-                setQuotes(quotesData);
-                countRef.current++; // Increment the count
-            });
-        });
+        const requests = buildGetQuotesRequests();
+        sendGetQuotesRequests(client, requests, setQuotes, countRef);
     };
 
     // Call handleGetQuotes() every 30 seconds
