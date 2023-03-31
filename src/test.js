@@ -102,7 +102,7 @@ const ItemList = ({ items }) => {
     const groupedItems = groupBy(items, 'pair');
   
     return (
-      <div className="item-list" style={{ backgroundColor: 'rgba(255, 255, 255, 0.9)' }}>
+      <div className="item-list" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', padding: '10px' }}>
         <div
           style={{
             display: 'grid',
@@ -111,7 +111,7 @@ const ItemList = ({ items }) => {
           }}
         >
           {Object.keys(groupedItems).map((group) => (
-            <div key={group} className="item-group">
+            <div key={group} className="item-group" style={{ backgroundColor: 'white', borderRadius: '5px', padding: '10px' }}>
               <h2>{group}</h2>
               {groupedItems[group].map((item, index) => (
                 <div
@@ -123,7 +123,7 @@ const ItemList = ({ items }) => {
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     padding: '10px',
-                    backgroundColor: 'white'
+                    backgroundColor: 'transparent'
                   }}
                 >
                   <div
@@ -155,6 +155,7 @@ const ItemList = ({ items }) => {
       </div>
     );
   };
+  
     
 
 
