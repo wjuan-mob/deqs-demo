@@ -163,6 +163,52 @@ const groupQuotesByPair = (items) => {
     return groupedQuotes;
 };
 
+const selectQuotesForDesiredAmount = (quotes, desiredAmount) => {
+    const sortedQuotes = quotes.sort((a, b) => {
+      const aRatio = a.requiredOutputAmounts / a.pseudoOutputAmount;
+      const bRatio = b.requiredOutputAmounts / b.pseudoOutputAmount;
+      return aRatio - bRatio;
+    });
+  
+    let selectedQuotes = [];
+    let currentPseudoOutput = 0;
+    let currentOutputAmount = 0;
+  
+    for (const quote of sortedQuotes) {
+      if (currentPseudoOutput >= desiredAmount) break;
+  
+      const quotePseudoOutput = quote.pseudoOutputAmount;
+      const quoteOutputAmount = quote.requiredOutputAmounts;
+      const quoteRatio = quoteOutputAmount / quotePseudoOutput;
+  
+      if (currentPseudoOutput + quotePseudoOutput <= desiredAmount) {
+        currentPseudoOutput += quotePseudoOutput;
+        currentOutputAmount += quoteOutputAmount;
+        selectedQuotes.push(quote);
+      } else {
+        const remainingPseudoOutput = desiredAmount - currentPseudoOutput;
+        const remainingOutputAmount = remainingPseudoOutput * quoteRatio;
+  
+        const proratedQuote = {
+          ...quote,
+          requiredOutputAmounts: remainingOutputAmount,
+          pseudoOutputAmount: remainingPseudoOutput,
+        };
+  
+        currentPseudoOutput += remainingPseudoOutput;
+        currentOutputAmount += remainingOutputAmount;
+        selectedQuotes.push(proratedQuote);
+      }
+    }
+  
+    const usedRatio = currentOutputAmount / currentPseudoOutput;
+    return { selectedQuotes, usedRatio };
+  };
+  
+  const selectQuotesForAllAmounts = (amounts, quotes) => {
+    return amounts.map(amount => selectQuotesForDesiredAmount(amount, quotes));
+  };
+  
 
 const groupBy = (items, key) => {
     return items.reduce((result, item) => {
