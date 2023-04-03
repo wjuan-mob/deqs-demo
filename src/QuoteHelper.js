@@ -5,32 +5,25 @@ const currencyPriority = [
     { name: "USD", tokenId: 2 }
 ];
 
-const compareTokens = (token1, token2, priority = currencyPriority) => {
+const areTokensInOrder = (token1, token2, priority = currencyPriority) => {
     const token1Index = priority.indexOf(token1);
     const token2Index = priority.indexOf(token2);
 
     if (token1Index === -1 && token2Index === -1) {
         // If both tokens are not in currencyPriority, compare them alphabetically
-        if (token1 < token2) {
-            return [token1, token2];
-        } else {
-            return [token2, token1];
-        }
+        return token1 < token2;
     } else if (token1Index === -1) {
         // If token1 is not in currencyPriority, use token2 as the first token
-        return [token2, token1];
+        return false;
     } else if (token2Index === -1) {
         // If token2 is not in currencyPriority, use token1 as the first token
-        return [token1, token2];
+        return true;
     } else {
         // Both tokens are in currencyPriority, sort them based on index
-        if (token1Index < token2Index) {
-            return [token1, token2];
-        } else {
-            return [token2, token1];
-        }
+        return token1Index < token2Index;
     }
 };
+
 
 const getTokenName = (token_id, priority = currencyPriority) => {
     const index = priority.findIndex(token => token.tokenId === token_id);
@@ -39,14 +32,18 @@ const getTokenName = (token_id, priority = currencyPriority) => {
 
 
 const getTradingPairKey = (pair, priority = currencyPriority) => {
-    const [firstToken, secondToken] = compareTokens(
-        pair.base_token_id,
-        pair.counter_token_id,
-        priority
-    );
+    const firstToken = getTokenName(pair.base_token_id, priority);
+    const secondToken = getTokenName(pair.counter_token_id, priority);
+    const areInOrder = areTokensInOrder(pair.base_token_id, pair.counter_token_id, priority);
 
-    return `${getTokenName(firstToken, priority)}/${getTokenName(secondToken, priority)}`;
+    if (areInOrder) {
+        return `${firstToken}/${secondToken}`;
+    } else {
+        return `${secondToken}/${firstToken}`;
+    }
 };
+
+
 
 const localizeCurrency = (bool, num) => {
     if (bool) {
@@ -76,25 +73,28 @@ const selectQuotesForDesiredAmount = (desiredAmount, quotes) => {
 
     const baseToken = quotes[0].pair.base_token_id;
     const counterToken = quotes[0].pair.counter_token_id;
-    const isBaseTokenFirst = compareTokens(baseToken, counterToken, currencyPriority) < 0;
-
+    const isBaseTokenFirst = areTokensInOrder(baseToken, counterToken, currencyPriority) < 0;
+    console.log(`IsBaseTokenFirst: ${isBaseTokenFirst}`);
+    console.log(getTradingPairKey(quotes[0].pair));
+    //The best quotes give the most stuff and require the least stuff.
+    const sortedQuotes = quotes.sort((a, b) =>  a.requiredOutputAmounts[0]/a.pseudoOutputAmount - b.requiredOutputAmounts[0]/b.pseudoOutputAmount);
+    console.log(sortedQuotes);
     // If desiredAmount is 0, just return the best quote.
     if (desiredAmount === 0) {
-        const sortedQuotes = quotes.sort((a, b) => a.requiredOutputAmounts[0] / a.pseudoOutputAmount - b.requiredOutputAmounts[0] / b.pseudoOutputAmount);
         return [sortedQuotes[0], localizeCurrency(isBaseTokenFirst, sortedQuotes[0].requiredOutputAmounts[0] / sortedQuotes[0].pseudoOutputAmount)];
     }
 
-    const sortedQuotes = quotes.sort((a, b) => a.requiredOutputAmounts[0] / a.pseudoOutputAmount - b.requiredOutputAmounts[0] / b.pseudoOutputAmount);
 
     let selectedQuotes = [];
     let selectedPseudoOutputAmount = 0;
 
     for (const quote of sortedQuotes) {
-        if (selectedPseudoOutputAmount + quote.pseudoOutputAmount <= desiredAmount) {
+        if (selectedPseudoOutputAmount + quote.pseudoOutputAmount < desiredAmount) {
             selectedQuotes.push(quote);
             selectedPseudoOutputAmount += quote.pseudoOutputAmount;
         } else {
             const remainingPseudoOutputAmount = desiredAmount - selectedPseudoOutputAmount;
+            //We assume only 1 required output.
             const selectedQuoteRatio = quote.requiredOutputAmounts[0] / quote.pseudoOutputAmount;
             const proratedRequiredOutputAmount = selectedQuoteRatio * remainingPseudoOutputAmount;
             const proratedQuote = {
@@ -125,5 +125,5 @@ module.exports = {
     selectQuotesForDesiredAmount,
     getTradingPairKey,
     getTokenName,
-    compareTokens,
+    areTokensInOrder,
 };

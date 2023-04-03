@@ -51,60 +51,58 @@ describe('selectQuotesForDesiredAmount', () => {
     const mockQuotes = [
         {
             pair: {
-                base_token_id: '1',
-                counter_token_id: '2',
+                base_token_id: 1,
+                counter_token_id: 2,
             },
             requiredOutputAmounts: [30],
             pseudoOutputAmount: 10,
         },
         {
             pair: {
-                base_token_id: '1',
-                counter_token_id: '2',
+                base_token_id: 1,
+                counter_token_id: 2,
             },
             requiredOutputAmounts: [50],
             pseudoOutputAmount: 10,
         },
         {
             pair: {
-                base_token_id: '1',
-                counter_token_id: '2',
+                base_token_id: 1,
+                counter_token_id: 2,
             },
             requiredOutputAmounts: [10],
             pseudoOutputAmount: 50,
         }
     ];
-
     it('returns the best quote if desiredAmount is 0', () => {
-        const [selectedQuote, selectedRatio] = selectQuotesForDesiredAmount(0, mockQuotes);
+        const [selectedQuote, selectedRatio] = selectQuotesForDesiredAmount(0, [...mockQuotes]);
         expect(selectedQuote).toEqual(mockQuotes[2]);
-
-        expect(selectedRatio).toEqual('0.3');
-
+        expect(selectedRatio).toEqual(5);
     });
 
+
     it('returns the quotes that add up to desiredAmount', () => {
-        const [selectedQuotes, selectedRatio] = selectQuotesForDesiredAmount(35, mockQuotes);
-        expect(selectedQuotes).toEqual([mockQuotes[0], mockQuotes[2]]);
-        expect(selectedRatio).toEqual('0.4166666666666667');
+        const [selectedQuote, selectedRatio] = selectQuotesForDesiredAmount(60, [...mockQuotes]);
+        expect(selectedQuote).toEqual([mockQuotes[2], mockQuotes[0]]);
+        expect(selectedRatio).toEqual(60 / 40);
     });
 
     it('returns a prorated quote if the sum of the selected quotes exceeds desiredAmount', () => {
-        const [selectedQuotes, selectedRatio] = selectQuotesForDesiredAmount(60, mockQuotes);
-        expect(selectedQuotes).toEqual([{
+        const [selectedQuote, selectedRatio] = selectQuotesForDesiredAmount(35, [...mockQuotes]);
+        expect(selectedQuote).toEqual([{
             pair: {
-                base_token_id: '1',
-                counter_token_id: '2',
+                base_token_id: 1,
+                counter_token_id: 2,
             },
-            requiredOutputAmounts: [60],
-            pseudoOutputAmount: 25,
+            requiredOutputAmounts: [10 / 50 * 35],
+            pseudoOutputAmount: 35,
         }]);
-        expect(selectedRatio).toEqual('0.4');
+        expect(selectedRatio).toEqual(5);
     });
 
-    it('returns "Insufficient depth of book" if the sum of the selected quotes is less than desiredAmount', () => {
+    it('returns depth of book if the sum of the selected quotes is less than desiredAmount', () => {
         const [selectedQuotes, selectedRatio] = selectQuotesForDesiredAmount(100, mockQuotes);
-        expect(selectedQuotes).toEqual([mockQuotes[0], mockQuotes[2], mockQuotes[1], mockQuotes[3]]);
+        expect(selectedQuotes).toEqual([mockQuotes[0], mockQuotes[1], mockQuotes[2]]);
         expect(selectedRatio).toEqual('Insufficient depth of book');
     });
 });
