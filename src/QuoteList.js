@@ -189,6 +189,15 @@ const selectQuotesForAllAmounts = (amounts, quotes) => {
     return amounts.map(amount => selectQuotesForDesiredAmount(amount, quotes));
 };
 
+function groupByPair(quotes) {
+    return quotes.reduce((result, quote) => {
+      const { base_token_id, counter_token_id } = quote.pair;
+      const group = `${base_token_id.toString()}_${counter_token_id.toString()}`;
+      result[group] = result[group] || [];
+      result[group].push(quote);
+      return result;
+    }, {});
+  }
 
 const groupBy = (items, key) => {
     return items.reduce((result, item) => {
@@ -292,6 +301,8 @@ export function ItemList({ items }) {
 function buildGetQuotesRequests() {
     const limit = 100;
     const requests = [];
+    const distinctPairs = new Set(); // To keep track of distinct pairs
+
     currency_config.pairs.forEach((config_pair) => {
         const request = new GetQuotesRequest();
         const pair = new Pair();
@@ -304,18 +315,21 @@ function buildGetQuotesRequests() {
         request.setBaseRangeMax(1000000);
         request.setLimit(limit);
         requests.push({ request, baseTokenId, counterTokenId });
+        distinctPairs.add(`${baseTokenId}_${counterTokenId}`); // Add the current pair to the set
     });
+    console.log(`Distinct pairs: ${Array.from(distinctPairs).join(", ")}`); // Log the distinct pairs
+
     return requests;
 }
 
 function handleGetQuotesResponse(response, setQuotes, countRef) {
-    const quotesData = [];
+    const newQuotesData = [];
     const quotesList = response.getQuotesList();
     quotesList.forEach((quote) => {
         const id = quote.getId().toString();
         const pair = quote.getPair();
-        const baseTokenId = pair.base_token_id;
-        const counterTokenId = pair.counter_token_id;
+        const base_token_id = pair.getBaseTokenId();
+        const counter_token_id = pair.getCounterTokenId();
         const blockVersion = quote.getSci().getBlockVersion();
         const requiredOutputAmounts = quote
             .getSci()
@@ -333,16 +347,16 @@ function handleGetQuotesResponse(response, setQuotes, countRef) {
 
         const quoteData = {
             id,
-            pair: { baseTokenId, counterTokenId },
+            pair: { base_token_id, counter_token_id },
             blockVersion,
             requiredOutputAmounts,
             pseudoOutputAmount,
         };
 
-        quotesData.push(quoteData);
+        newQuotesData.push(quoteData);
     });
 
-    setQuotes(quotesData);
+    setQuotes(prevQuotes => [...prevQuotes, ...newQuotesData]); // Append new quotes to existing quotes    
     countRef.current++; // Increment the count
 }
 
@@ -392,41 +406,55 @@ function QuoteList() {
         };
     }, []);
 
+    // Process the quotes when they are updated.
+    useEffect(() => {
+        const groupedQuotes = groupByPair(quotes);
+        // Do something with the grouped quotes
+    }, [quotes]);
+
+    const groupedQuotes = groupByPair(quotes);
+    const numGroups = Object.keys(groupedQuotes).length;
+
     return (
         <div className="App">
             <header className="App-header">
                 <img src={logo} className="App-logo" alt="logo" style={{ width: '100px', height: '100px' }} />
                 <div>
+                <p>Number of different groups: {numGroups}</p>
                     <button onClick={handleGetQuotes}>Get Quotes</button>
                     <button onClick={stopPolling}>Stop Polling</button>
                     <ul>
-                        {quotes.map((quote) => (
-                            <li key={quote.id.toString()} style={quoteIdStyle}>
-                                <span style={quoteItemStyle}> Quote ID: </span> {quote.id.toString()}
-                                <br />
-                                <span style={quoteItemStyle}>Pair:</span> {JSON.stringify(quote.pair)}
-                                <br />
-                                <span style={quoteItemStyle}>Block Version:</span> {quote.blockVersion}
-                                <br />
-                                <span style={quoteItemStyle}>Required Output Amounts:</span> <br />
+                        {Object.entries(groupedQuotes).map(([pair, quotes]) => (
+                            <li key={pair} style={quoteIdStyle}>
                                 <ul>
-                                    {quote.requiredOutputAmounts.map((amount, index) => (
-                                        <li key={index}>
-                                            <span style={quoteItemStyle}>Amount:</span> {amount.amount}
+                                    {quotes.map((quote) => (
+                                        <li key={quote.id}>
+                                            <span style={quoteItemStyle}>Pair:</span> {pair}
                                             <br />
-                                            <span style={quoteItemStyle}>Token Id:</span> {amount.tokenId}
+                                            <span style={quoteItemStyle}>Block Version:</span> {quote.blockVersion}
                                             <br />
+                                            <span style={quoteItemStyle}>Required Output Amounts:</span> <br />
+                                            <ul>
+                                                {quote.requiredOutputAmounts.map((amount, index) => (
+                                                    <li key={index}>
+                                                        <span style={quoteItemStyle}>Amount:</span> {amount.amount}
+                                                        <br />
+                                                        <span style={quoteItemStyle}>Token Id:</span> {amount.tokenId}
+                                                        <br />
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                            Pseudo Output Amount: <br />
+                                            <ul>
+                                                <li>
+                                                    Amount: {quote.pseudoOutputAmount.amount}
+                                                    <br />
+                                                    Token Id: {quote.pseudoOutputAmount.tokenId}
+                                                    <br />
+                                                </li>
+                                            </ul>
                                         </li>
                                     ))}
-                                </ul>
-                                Pseudo Output Amount: <br />
-                                <ul>
-                                    <li>
-                                        Amount: {quote.pseudoOutputAmount.amount}
-                                        <br />
-                                        Token Id: {quote.pseudoOutputAmount.tokenId}
-                                        <br />
-                                    </li>
                                 </ul>
                             </li>
                         ))}
