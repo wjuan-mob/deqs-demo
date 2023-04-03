@@ -2,7 +2,7 @@ import React, { Component, useState, useEffect, useRef } from 'react';
 import logo from './logo.png';
 import currency_config from './currency_config.json';
 import { Tooltip } from 'react-tooltip';
-import { compareTokens, getPairKey, getTokenName } from './QuoteHelper';
+import { compareTokens, getTradingPairKey, getTokenName, selectQuotesForDesiredAmount } from './QuoteHelper';
 
 const { DeqsClientAPIClient } = require('./deqs_grpc_web_pb.js');
 const { Pair, GetQuotesRequest, GetQuotesResponse, Quote } = require('./deqs_pb.js');
@@ -66,7 +66,7 @@ const groupQuotesByQuantityAndPair = (quotes) => {
     return quotes.reduce((result, quote) => {
         const quantity = quote.quantity;
         const pair = quote.pairs[0];
-        const pairKey = getPairKey(pair);
+        const pairKey = getTradingPairKey(pair);
         result[quantity] = result[quantity] || {};
         result[quantity][pairKey] = result[quantity][pairKey] || [];
         result[quantity][pairKey].push(quote);
@@ -106,7 +106,7 @@ const combineQuotesIntoBuckets = (values, quotes) => {
     const combinedQuotes = Object.keys(quantityQuotes).map((quantity) => {
         const pairQuotes = quantityQuotes[quantity];
         const pair = pairQuotes[0].pairs[0];
-        const pairKey = getPairKey(pair);
+        const pairKey = getTradingPairKey(pair);
         const sortedPairQuotes = sortQuotesByBaseCurrency(pairQuotes, currencyPriority);
         const bid = sortedPairQuotes[0].price;
         const ask = sortedPairQuotes[1].price;
@@ -141,94 +141,27 @@ const sortQuotesByQuantity = (quotes) => {
     });
 };
 
-const localizeCurrency = (bool, num) => {
-    if (bool) {
-        return num;
-    } else {
-        return 1 / num;
-    }
-}
 
-// This function selects quotes from an array using the pseudoOutputAmounts to fulfill the desired amount
-// The function takes in two parameters:
-// 1. desiredAmount: a number representing the desired quantity of pseudoOutputAmount
-// 2. quotes: an array of objects representing different quotes all for one specific pair
 
-// If the desiredAmount is zero, the function returns the quote with the lowest price.
-// Otherwise, the function selects quotes from the quotes array based on the price until the sum of the quotes is greater than the desired amount.
-// If the sum of the selected pseudo output amounts exceeds the desired amount, the function returns 1 prorated quote with the worst price of the selected quotes to fulfill the amount exactly.
-
-// The function returns an array of two elements:
-// 1. selectedQuotes: an array of selected quotes, at most one of which is potentially prorated
-// 2. selectedRatio: a number representing the average price for the amount expressed as a ratio of desired/provided. If the quantity is insufficient it returns a special string indicating that the depth of book has been exceeded.
-const selectQuotesForDesiredAmount = (desiredAmount, quotes) => {
-    if (!quotes.every(q => q.pair === quotes[0].pair)) {
-        console.error("All quotes should be for the same pair");
-        return null;
-    }
-
-    const baseToken = quotes[0].pair.base_token_id;
-    const counterToken = quotes[0].pair.counter_token_id;
-    const isBaseTokenFirst = compareTokens(baseToken, counterToken, currencyPriority) < 0;
-
-    // If desiredAmount is 0, just return the best quote.
-    if (desiredAmount === 0) {
-        const sortedQuotes = quotes.sort((a, b) => a.requiredOutputAmounts[0] / a.pseudoOutputAmount - b.requiredOutputAmounts[0] / b.pseudoOutputAmount);
-        return [sortedQuotes[0], localizeCurrency(isBaseTokenFirst, sortedQuotes[0].requiredOutputAmounts[0] / sortedQuotes[0].pseudoOutputAmount)];
-    }
-
-    const sortedQuotes = quotes.sort((a, b) => a.requiredOutputAmounts[0] / a.pseudoOutputAmount - b.requiredOutputAmounts[0] / b.pseudoOutputAmount);
-
-    let selectedQuotes = [];
-    let selectedPseudoOutputAmount = 0;
-
-    for (const quote of sortedQuotes) {
-        if (selectedPseudoOutputAmount + quote.pseudoOutputAmount <= desiredAmount) {
-            selectedQuotes.push(quote);
-            selectedPseudoOutputAmount += quote.pseudoOutputAmount;
-        } else {
-            const remainingPseudoOutputAmount = desiredAmount - selectedPseudoOutputAmount;
-            const selectedQuoteRatio = quote.requiredOutputAmounts[0] / quote.pseudoOutputAmount;
-            const proratedRequiredOutputAmount = selectedQuoteRatio * remainingPseudoOutputAmount;
-            const proratedQuote = {
-                ...quote,
-                requiredOutputAmounts: [proratedRequiredOutputAmount],
-                pseudoOutputAmount: remainingPseudoOutputAmount,
-            };
-            selectedQuotes.push(proratedQuote);
-            break;
-        }
-    }
-
-    const selectedPseudoOutputTotal = selectedQuotes.reduce((total, quote) => {
-        return total + quote.pseudoOutputAmount;
-    }, 0);
-    const selectedRequiredOutputTotal = selectedQuotes.reduce((total, quote) => {
-        return total + quote.requiredOutputAmounts[0]
-    }, 0);
-    if (selectedPseudoOutputTotal !== desiredAmount) {
-        return [selectedQuotes, "Insufficient depth of book"];
-    }
-    const selectedRatio = selectedRequiredOutputTotal / selectedPseudoOutputTotal;
-
-    return [selectedQuotes, localizeCurrency(isBaseTokenFirst, selectedRatio)];
-};
 
 
 
 const bucketizeQuotesForAllAmounts = (amounts, pairToQuotesMap) => {
     const result = {};
-
-    for (const [pair, quotes] of Object.entries(pairToQuotesMap)) {
+    console.log("inside buckets");
+    for (const [pairString, quotes] of pairToQuotesMap) {
+        const pair = JSON.parse(pairString);
+        console.log("bucketizing: "+ getTradingPairKey(pair));
+        console.log("quotes: "+ quotes.length);
         const selectedQuotesMap = {};
         for (const amount of amounts) {
             selectedQuotesMap[amount] = selectQuotesForDesiredAmount(amount, quotes);
         }
-        result[pair] = selectedQuotesMap;
+        result[pairString] = selectedQuotesMap;
     }
-
     return result;
 };
+
 
 function groupByPair(quotes) {
     return quotes.reduce((result, quote) => {
@@ -343,74 +276,93 @@ function buildGetQuotesRequests() {
     const limit = 100;
     const requests = [];
     const distinctPairs = new Set(); // To keep track of distinct pairs
-
+  
     currency_config.pairs.forEach((config_pair) => {
-        const request = new GetQuotesRequest();
-        const pair = new Pair();
-        const baseTokenId = config_pair.base_token_id;
-        const counterTokenId = config_pair.counter_token_id;
-        pair.setBaseTokenId(baseTokenId);
-        pair.setCounterTokenId(counterTokenId);
-        request.setPair(pair);
-        request.setBaseRangeMin(1);
-        request.setBaseRangeMax(1000000);
-        request.setLimit(limit);
-        requests.push({ request, baseTokenId, counterTokenId });
-        distinctPairs.add(`${baseTokenId}_${counterTokenId}`); // Add the current pair to the set
+      const pair = new Pair();
+      const baseTokenId = config_pair.base_token_id;
+      const counterTokenId = config_pair.counter_token_id;
+      pair.setBaseTokenId(baseTokenId);
+      pair.setCounterTokenId(counterTokenId);
+      const pairKey = `${baseTokenId}_${counterTokenId}`;
+      const swappedPairKey = `${counterTokenId}_${baseTokenId}`;
+      if (distinctPairs.has(pairKey) || distinctPairs.has(swappedPairKey)) {
+        return; // Skip duplicates
+    }
+      // Add the request for the original pair
+      const originalRequest = new GetQuotesRequest();
+      originalRequest.setPair(pair);
+      originalRequest.setBaseRangeMin(1);
+      originalRequest.setBaseRangeMax(1000000);
+      originalRequest.setLimit(limit);
+      requests.push({ request: originalRequest, baseTokenId, counterTokenId });
+  
+      distinctPairs.add(`${baseTokenId}_${counterTokenId}`); // Add the current pair to the set
+      // Add the request for the swapped pair
+      const swappedPair = new Pair();
+      swappedPair.setBaseTokenId(counterTokenId);
+      swappedPair.setCounterTokenId(baseTokenId);
+      const swappedRequest = new GetQuotesRequest();
+      swappedRequest.setPair(swappedPair);
+      swappedRequest.setBaseRangeMin(1);
+      swappedRequest.setBaseRangeMax(1000000);
+      swappedRequest.setLimit(limit);
+      requests.push({ request: swappedRequest, baseTokenId: counterTokenId, counterTokenId: baseTokenId });
+  
+      distinctPairs.add(`${counterTokenId}_${baseTokenId}`); // Add the current pair to the set
     });
     console.log(`Distinct pairs: ${Array.from(distinctPairs).join(", ")}`); // Log the distinct pairs
-    // console.log(`Quotes: ${requests}`);
     return requests;
-}
+  }
+  
 
 function handleGetQuotesResponse(response, setQuotesMap, countRef) {
     const newQuotesData = new Map();
     const quotesList = response.getQuotesList();
     quotesList.forEach((quote) => {
-        const id = quote.getId().toString();
-        const pair = quote.getPair();
-        const base_token_id = pair.getBaseTokenId();
-        const counter_token_id = pair.getCounterTokenId();
-        const blockVersion = quote.getSci().getBlockVersion();
-        const requiredOutputAmounts = quote
-            .getSci()
-            .getRequiredOutputAmountsList()
-            .map((amount) => {
-                return {
-                    amount: amount.getValue(),
-                    tokenId: amount.getTokenId(),
-                };
-            });
-        const pseudoOutputAmount = {
-            amount: quote.getSci().getPseudoOutputAmount().getValue(),
-            tokenId: quote.getSci().getPseudoOutputAmount().getTokenId(),
-        };
-
-        const quoteData = {
-            id,
-            pair: { base_token_id, counter_token_id },
-            blockVersion,
-            requiredOutputAmounts,
-            pseudoOutputAmount,
-        };
-
-        const quoteKey = `${base_token_id}_${counter_token_id}`;
-        if (newQuotesData.has(quoteKey)) {
-            console.log("new quotes data has quoteKey:", quoteKey);
-            newQuotesData.get(quoteKey).push(quoteData);
-        } else {
-            console.log("new quotes data does not have quoteKey:", quoteKey);
-            newQuotesData.set(quoteKey, [quoteData]);
-        }
+      const id = quote.getId().toString();
+      const pair = quote.getPair();
+      const base_token_id = pair.getBaseTokenId();
+      const counter_token_id = pair.getCounterTokenId();
+      const blockVersion = quote.getSci().getBlockVersion();
+      const requiredOutputAmounts = quote
+        .getSci()
+        .getRequiredOutputAmountsList()
+        .map((amount) => {
+          return {
+            amount: amount.getValue(),
+            tokenId: amount.getTokenId(),
+          };
+        });
+      const pseudoOutputAmount = {
+        amount: quote.getSci().getPseudoOutputAmount().getValue(),
+        tokenId: quote.getSci().getPseudoOutputAmount().getTokenId(),
+      };
+  
+      const quoteData = {
+        id,
+        pair: { base_token_id, counter_token_id },
+        blockVersion,
+        requiredOutputAmounts,
+        pseudoOutputAmount,
+      };
+  
+      const quoteKey = JSON.stringify({ base_token_id, counter_token_id });
+      if (newQuotesData.has(quoteKey)) {
+        console.log("new quotes data has quoteKey:", quoteKey);
+        newQuotesData.get(quoteKey).push(quoteData);
+      } else {
+        console.log("new quotes data does not have quoteKey:", quoteKey);
+        newQuotesData.set(quoteKey, [quoteData]);
+      }
     });
     newQuotesData.forEach((quotesData, pairKey) => {
-        console.log("pairKey:", pairKey);
-        setQuotesMap((prevQuotesMap) => {
-            return prevQuotesMap.set(pairKey, quotesData);
-        });
+      setQuotesMap((prevQuotesMap) => {
+        return prevQuotesMap.set(pairKey, quotesData);
+      });
     });
     countRef.current++; // Increment the count
-}
+  }
+  
 
 
 
@@ -421,7 +373,7 @@ function sendGetQuotesRequests(client, requests, setQuotesMap, countRef) {
                 console.error(err);
                 return;
             }
-            console.log("received:" + response);
+            console.log("received: stuff");
             handleGetQuotesResponse(response, setQuotesMap, countRef);
         });
     });
@@ -469,7 +421,9 @@ function QuoteList() {
     // const groupedQuotes = groupByPair(groupedQuotes);
     const numGroups = groupedQuotes.size;
     const buckets = bucketizeQuotesForAllAmounts(Amounts, groupedQuotes);
+    console.log("Buckets content:", JSON.stringify(buckets, null, 2));
 
+    const bucketsArray = Array.from(buckets);
     return (
         <div className="App">
             <header className="App-header">
@@ -514,6 +468,7 @@ function QuoteList() {
                             </li>
                         ))}
                     </ul>
+                    <pre>{JSON.stringify(buckets, null, 2)}</pre>
                 </div>
             </header>
         </div>
@@ -534,5 +489,8 @@ export function CurrencyPairs() {
         </div>
     );
 }
+module.exports = {
+    selectQuotesForDesiredAmount
+};
 
 export default QuoteList;
