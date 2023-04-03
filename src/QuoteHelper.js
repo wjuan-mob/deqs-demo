@@ -77,13 +77,13 @@ const selectQuotesForDesiredAmount = (desiredAmount, quotes) => {
     console.log(`IsBaseTokenFirst: ${isBaseTokenFirst}`);
     console.log(getTradingPairKey(quotes[0].pair));
     //The best quotes give the most stuff and require the least stuff.
-    const sortedQuotes = quotes.sort((a, b) => a.requiredOutputAmounts[0] / a.pseudoOutputAmount - b.requiredOutputAmounts[0] / b.pseudoOutputAmount);
+    const sortedQuotes = quotes.sort((a, b) => a.requiredOutputAmounts.amount / a.pseudoOutputAmount.amount - b.requiredOutputAmounts.amount / b.pseudoOutputAmount.amount);
     console.log(sortedQuotes);
     // If desiredAmount is 0, just return the best quote.
     if (desiredAmount === 0) {
         return {
             quotes: sortedQuotes[0],
-            price: localizeCurrency(isBaseTokenFirst, sortedQuotes[0].requiredOutputAmounts[0] / sortedQuotes[0].pseudoOutputAmount)
+            price: localizeCurrency(isBaseTokenFirst, sortedQuotes[0].requiredOutputAmounts.amount / sortedQuotes[0].pseudoOutputAmount.amount)
         };
     }
 
@@ -92,18 +92,18 @@ const selectQuotesForDesiredAmount = (desiredAmount, quotes) => {
     let selectedPseudoOutputAmount = 0;
 
     for (const quote of sortedQuotes) {
-        if (selectedPseudoOutputAmount + quote.pseudoOutputAmount < desiredAmount) {
+        if (selectedPseudoOutputAmount + quote.pseudoOutputAmount.amount < desiredAmount) {
             selectedQuotes.push(quote);
-            selectedPseudoOutputAmount += quote.pseudoOutputAmount;
+            selectedPseudoOutputAmount += quote.pseudoOutputAmount.amount;
         } else {
             const remainingPseudoOutputAmount = desiredAmount - selectedPseudoOutputAmount;
             //We assume only 1 required output.
-            const selectedQuoteRatio = quote.requiredOutputAmounts[0] / quote.pseudoOutputAmount;
+            const selectedQuoteRatio = quote.requiredOutputAmounts.amount / quote.pseudoOutputAmount.amount;
             const proratedRequiredOutputAmount = selectedQuoteRatio * remainingPseudoOutputAmount;
             const proratedQuote = {
                 ...quote,
-                requiredOutputAmounts: [proratedRequiredOutputAmount],
-                pseudoOutputAmount: remainingPseudoOutputAmount,
+                requiredOutputAmounts: {amount: proratedRequiredOutputAmount, tokenId: quote.requiredOutputAmounts.tokenId},
+                pseudoOutputAmount: {amount: remainingPseudoOutputAmount, tokenId:quote.pseudoOutputAmount.tokenId},
             };
             selectedQuotes.push(proratedQuote);
             break;
@@ -111,10 +111,10 @@ const selectQuotesForDesiredAmount = (desiredAmount, quotes) => {
     }
 
     const selectedPseudoOutputTotal = selectedQuotes.reduce((total, quote) => {
-        return total + quote.pseudoOutputAmount;
+        return total + quote.pseudoOutputAmount.amount;
     }, 0);
     const selectedRequiredOutputTotal = selectedQuotes.reduce((total, quote) => {
-        return total + quote.requiredOutputAmounts[0]
+        return total + quote.requiredOutputAmounts.amount
     }, 0);
     if (selectedPseudoOutputTotal !== desiredAmount) {
         return {

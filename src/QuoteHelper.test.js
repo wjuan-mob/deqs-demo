@@ -54,24 +54,24 @@ describe('selectQuotesForDesiredAmount', () => {
                 base_token_id: 1,
                 counter_token_id: 2,
             },
-            requiredOutputAmounts: [30],
-            pseudoOutputAmount: 10,
+            requiredOutputAmounts: { amount: 30, tokenId: 2 },
+            pseudoOutputAmount: { amount: 10, tokenId: 1 },
         },
         {
             pair: {
                 base_token_id: 1,
                 counter_token_id: 2,
             },
-            requiredOutputAmounts: [50],
-            pseudoOutputAmount: 10,
+            requiredOutputAmounts: { amount: 50, tokenId: 2 },
+            pseudoOutputAmount: { amount: 10, tokenId: 1 },
         },
         {
             pair: {
                 base_token_id: 1,
                 counter_token_id: 2,
             },
-            requiredOutputAmounts: [10],
-            pseudoOutputAmount: 50,
+            requiredOutputAmounts: { amount: 10, tokenId: 2 },
+            pseudoOutputAmount: { amount: 50, tokenId: 1 },
         }
     ];
     it('returns the best quote if desiredAmount is 0', () => {
@@ -95,8 +95,8 @@ describe('selectQuotesForDesiredAmount', () => {
                 base_token_id: 1,
                 counter_token_id: 2,
             },
-            requiredOutputAmounts: [10 / 50 * 35],
-            pseudoOutputAmount: 35,
+            requiredOutputAmounts: {amount: 10 / 50 * 35, tokenId: 2},
+            pseudoOutputAmount: {amount: 35, tokenId: 1},
         }]);
         expect(selectedRatio).toEqual(5);
     });

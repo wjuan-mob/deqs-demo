@@ -2,7 +2,7 @@ import React, { Component, useState, useEffect, useRef } from 'react';
 import logo from './logo.png';
 import currency_config from './currency_config.json';
 import { Tooltip } from 'react-tooltip';
-import { compareTokens, getTradingPairKey, getTokenName, selectQuotesForDesiredAmount } from './QuoteHelper';
+import { getTradingPairKey, getTokenName, selectQuotesForDesiredAmount } from './QuoteHelper';
 
 const { DeqsClientAPIClient } = require('./deqs_grpc_web_pb.js');
 const { Pair, GetQuotesRequest, GetQuotesResponse, Quote } = require('./deqs_pb.js');
@@ -151,11 +151,15 @@ const bucketizeQuotesForAllAmounts = (amounts, pairToQuotesMap) => {
     console.log("inside buckets");
     for (const [pairString, quotes] of pairToQuotesMap) {
         const pair = JSON.parse(pairString);
-        console.log("bucketizing: "+ getTradingPairKey(pair));
-        console.log("quotes: "+ quotes.length);
+        console.log("bucketizing: " + getTradingPairKey(pair));
+        console.log("quotes: " + quotes.length);
         const selectedQuotesMap = {};
         for (const amount of amounts) {
             selectedQuotesMap[amount] = selectQuotesForDesiredAmount(amount, quotes);
+            console.log("selected quotes for amount");
+            console.log(amount);
+            console.log("price" + selectedQuotesMap[amount].price);
+            console.log(selectedQuotesMap[amount].quotes);
         }
         result[pairString] = selectedQuotesMap;
     }
@@ -276,93 +280,97 @@ function buildGetQuotesRequests() {
     const limit = 100;
     const requests = [];
     const distinctPairs = new Set(); // To keep track of distinct pairs
-  
+
     currency_config.pairs.forEach((config_pair) => {
-      const pair = new Pair();
-      const baseTokenId = config_pair.base_token_id;
-      const counterTokenId = config_pair.counter_token_id;
-      pair.setBaseTokenId(baseTokenId);
-      pair.setCounterTokenId(counterTokenId);
-      const pairKey = `${baseTokenId}_${counterTokenId}`;
-      const swappedPairKey = `${counterTokenId}_${baseTokenId}`;
-      if (distinctPairs.has(pairKey) || distinctPairs.has(swappedPairKey)) {
-        return; // Skip duplicates
-    }
-      // Add the request for the original pair
-      const originalRequest = new GetQuotesRequest();
-      originalRequest.setPair(pair);
-      originalRequest.setBaseRangeMin(1);
-      originalRequest.setBaseRangeMax(1000000);
-      originalRequest.setLimit(limit);
-      requests.push({ request: originalRequest, baseTokenId, counterTokenId });
-  
-      distinctPairs.add(`${baseTokenId}_${counterTokenId}`); // Add the current pair to the set
-      // Add the request for the swapped pair
-      const swappedPair = new Pair();
-      swappedPair.setBaseTokenId(counterTokenId);
-      swappedPair.setCounterTokenId(baseTokenId);
-      const swappedRequest = new GetQuotesRequest();
-      swappedRequest.setPair(swappedPair);
-      swappedRequest.setBaseRangeMin(1);
-      swappedRequest.setBaseRangeMax(1000000);
-      swappedRequest.setLimit(limit);
-      requests.push({ request: swappedRequest, baseTokenId: counterTokenId, counterTokenId: baseTokenId });
-  
-      distinctPairs.add(`${counterTokenId}_${baseTokenId}`); // Add the current pair to the set
+        const pair = new Pair();
+        const baseTokenId = config_pair.base_token_id;
+        const counterTokenId = config_pair.counter_token_id;
+        pair.setBaseTokenId(baseTokenId);
+        pair.setCounterTokenId(counterTokenId);
+        const pairKey = `${baseTokenId}_${counterTokenId}`;
+        const swappedPairKey = `${counterTokenId}_${baseTokenId}`;
+        if (distinctPairs.has(pairKey) || distinctPairs.has(swappedPairKey)) {
+            return; // Skip duplicates
+        }
+        // Add the request for the original pair
+        const originalRequest = new GetQuotesRequest();
+        originalRequest.setPair(pair);
+        originalRequest.setBaseRangeMin(1);
+        originalRequest.setBaseRangeMax(1000000);
+        originalRequest.setLimit(limit);
+        requests.push({ request: originalRequest, baseTokenId, counterTokenId });
+
+        distinctPairs.add(`${baseTokenId}_${counterTokenId}`); // Add the current pair to the set
+        // Add the request for the swapped pair
+        const swappedPair = new Pair();
+        swappedPair.setBaseTokenId(counterTokenId);
+        swappedPair.setCounterTokenId(baseTokenId);
+        const swappedRequest = new GetQuotesRequest();
+        swappedRequest.setPair(swappedPair);
+        swappedRequest.setBaseRangeMin(1);
+        swappedRequest.setBaseRangeMax(1000000);
+        swappedRequest.setLimit(limit);
+        requests.push({ request: swappedRequest, baseTokenId: counterTokenId, counterTokenId: baseTokenId });
+
+        distinctPairs.add(`${counterTokenId}_${baseTokenId}`); // Add the current pair to the set
     });
     console.log(`Distinct pairs: ${Array.from(distinctPairs).join(", ")}`); // Log the distinct pairs
     return requests;
-  }
-  
+}
+
 
 function handleGetQuotesResponse(response, setQuotesMap, countRef) {
     const newQuotesData = new Map();
     const quotesList = response.getQuotesList();
     quotesList.forEach((quote) => {
-      const id = quote.getId().toString();
-      const pair = quote.getPair();
-      const base_token_id = pair.getBaseTokenId();
-      const counter_token_id = pair.getCounterTokenId();
-      const blockVersion = quote.getSci().getBlockVersion();
-      const requiredOutputAmounts = quote
-        .getSci()
-        .getRequiredOutputAmountsList()
-        .map((amount) => {
-          return {
-            amount: amount.getValue(),
-            tokenId: amount.getTokenId(),
-          };
-        });
-      const pseudoOutputAmount = {
-        amount: quote.getSci().getPseudoOutputAmount().getValue(),
-        tokenId: quote.getSci().getPseudoOutputAmount().getTokenId(),
-      };
-  
-      const quoteData = {
-        id,
-        pair: { base_token_id, counter_token_id },
-        blockVersion,
-        requiredOutputAmounts,
-        pseudoOutputAmount,
-      };
-  
-      const quoteKey = JSON.stringify({ base_token_id, counter_token_id });
-      if (newQuotesData.has(quoteKey)) {
-        console.log("new quotes data has quoteKey:", quoteKey);
-        newQuotesData.get(quoteKey).push(quoteData);
-      } else {
-        console.log("new quotes data does not have quoteKey:", quoteKey);
-        newQuotesData.set(quoteKey, [quoteData]);
-      }
+        const id = quote.getId().toString();
+        const pair = quote.getPair();
+        const base_token_id = pair.getBaseTokenId();
+        const counter_token_id = pair.getCounterTokenId();
+        const blockVersion = quote.getSci().getBlockVersion();
+        const requiredOutputAmounts = {
+            amount: quote
+                .getSci()
+                .getRequiredOutputAmountsList()
+                .reduce((accumulator, amount) => {
+                    if (amount.getTokenId() !== counter_token_id) {
+                        throw new Error('All tokenIds in requiredOutputAmountsList should be equal to counter_token_id');
+                    }
+                    return accumulator + amount.getValue();
+                }, 0),
+            tokenId: counter_token_id
+        };
+        const pseudoOutputAmount = {
+            amount: quote.getSci().getPseudoOutputAmount().getValue(),
+            tokenId: quote.getSci().getPseudoOutputAmount().getTokenId(),
+        };
+
+        const quoteData = {
+            id,
+            pair: { base_token_id, counter_token_id },
+            blockVersion,
+            requiredOutputAmounts,
+            pseudoOutputAmount,
+        };
+
+        const quoteKey = JSON.stringify({ base_token_id, counter_token_id });
+        if (newQuotesData.has(quoteKey)) {
+            console.log("new quotes data has quoteKey:", quoteKey);
+            newQuotesData.get(quoteKey).push(quoteData);
+        } else {
+            console.log("new quotes data does not have quoteKey:", quoteKey);
+            newQuotesData.set(quoteKey, [quoteData]);
+        }
     });
     newQuotesData.forEach((quotesData, pairKey) => {
-      setQuotesMap((prevQuotesMap) => {
-        return prevQuotesMap.set(pairKey, quotesData);
-      });
+        setQuotesMap((prevQuotesMap) => {
+            return prevQuotesMap.set(pairKey, quotesData);
+        });
     });
     countRef.current++; // Increment the count
-  }
-  
+}
+
+
 
 
 
@@ -442,16 +450,14 @@ function QuoteList() {
                                             <br />
                                             <span style={quoteItemStyle}>Block Version:</span> {quote.blockVersion}
                                             <br />
-                                            <span style={quoteItemStyle}>Required Output Amounts:</span> <br />
+                                            Required Output Amount: <br />
                                             <ul>
-                                                {quote.requiredOutputAmounts.map((amount, index) => (
-                                                    <li key={index}>
-                                                        <span style={quoteItemStyle}>Amount:</span> {amount.amount}
-                                                        <br />
-                                                        <span style={quoteItemStyle}>Token Id:</span> {amount.tokenId}
-                                                        <br />
-                                                    </li>
-                                                ))}
+                                                <li>
+                                                    Amount: {quote.requiredOutputAmounts.amount}
+                                                    <br />
+                                                    Token Id: {quote.requiredOutputAmounts.tokenId}
+                                                    <br />
+                                                </li>
                                             </ul>
                                             Pseudo Output Amount: <br />
                                             <ul>
@@ -489,8 +495,4 @@ export function CurrencyPairs() {
         </div>
     );
 }
-module.exports = {
-    selectQuotesForDesiredAmount
-};
-
 export default QuoteList;
