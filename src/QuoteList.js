@@ -2,6 +2,7 @@ import React, { Component, useState, useEffect, useRef } from 'react';
 import logo from './logo.png';
 import currency_config from './currency_config.json';
 import { Tooltip } from 'react-tooltip';
+import { getPairKey } from './QuoteHelper';
 
 const { DeqsClientAPIClient } = require('./deqs_grpc_web_pb.js');
 const { Pair, GetQuotesRequest, GetQuotesResponse, Quote } = require('./deqs_pb.js');
@@ -13,8 +14,6 @@ const enableDevTools = window.__GRPCWEB_DEVTOOLS__ || (() => {
 });
 
 var client = new DeqsClientAPIClient('http://localhost:9090', null, null);
-
-const currencyPriority = ["GBP", "EUR", "USD"];
 
 const quoteIdStyle = {
     margin: '10px 0',
@@ -53,17 +52,6 @@ const truncatedStyle = {
 
 const groupHeaderStyle = {
     marginBottom: '10px',
-};
-
-const getPairKey = (pair) => {
-    const { base_currency, counter_currency } = pair;
-    const orderedCurrencies = [
-        base_currency,
-        counter_currency
-    ].sort((a, b) => {
-        return currencyPriority.indexOf(b) - currencyPriority.indexOf(a);
-    });
-    return `${orderedCurrencies[0]}/${orderedCurrencies[1]}`;
 };
 
 const groupQuotesByQuantityAndPair = (quotes) => {
@@ -145,8 +133,25 @@ const sortQuotesByQuantity = (quotes) => {
     });
 };
 
+// This function selects quotes from an array using the pseudoOutputAmounts to fulfill the desired amount
+// The function takes in two parameters:
+// 1. desiredAmount: a number representing the desired quantity of pseudoOutputAmount
+// 2. quotes: an array of objects representing different quotes all for one specific pair
 
+// If the desiredAmount is zero, the function returns the quote with the lowest price.
+// Otherwise, the function selects quotes from the quotes array based on the price until the sum of the quotes is greater than the desired amount.
+// If the sum of the selected pseudo output amounts exceeds the desired amount, the function returns 1 prorated quote with the worst price of the selected quotes to fulfill the amount exactly.
+
+// The function returns an array of two elements:
+// 1. selectedQuotes: an array of selected quotes, at most one of which is potentially prorated
+// 2. selectedRatio: a number representing the average price for the amount expressed as a ratio of desired/provided. If the quantity is insufficient it returns a special string indicating that the depth of book has been exceeded.
 const selectQuotesForDesiredAmount = (desiredAmount, quotes) => {
+    if (!quotes.every(q => q.pair === quotes[0].pair)) {
+        console.error("All quotes should be for the same pair");
+        return null;
+    }
+
+    // If desiredAmount is 0, just return the best quote.
     if (desiredAmount === 0) {
         const sortedQuotes = quotes.sort((a, b) => a.requiredOutputAmounts[0] / a.pseudoOutputAmount - b.requiredOutputAmounts[0] / b.pseudoOutputAmount);
         return [sortedQuotes[0], sortedQuotes[0].requiredOutputAmounts[0] / sortedQuotes[0].pseudoOutputAmount];
@@ -158,8 +163,6 @@ const selectQuotesForDesiredAmount = (desiredAmount, quotes) => {
     let selectedPseudoOutputAmount = 0;
 
     for (const quote of sortedQuotes) {
-        const quoteRatio = quote.requiredOutputAmounts[0] / quote.pseudoOutputAmount;
-
         if (selectedPseudoOutputAmount + quote.pseudoOutputAmount <= desiredAmount) {
             selectedQuotes.push(quote);
             selectedPseudoOutputAmount += quote.pseudoOutputAmount;
@@ -177,12 +180,19 @@ const selectQuotesForDesiredAmount = (desiredAmount, quotes) => {
         }
     }
 
-    const selectedRatio = selectedQuotes.reduce((total, quote) => {
-        return total + quote.requiredOutputAmounts[0] / quote.pseudoOutputAmount;
-    }, 0) / selectedQuotes.length;
+    const selectedPseudoOutputTotal = selectedQuotes.reduce((total, quote) => {
+        return total + quote.pseudoOutputAmount;
+    }, 0);
+
+    const selectedRatio = selectedPseudoOutputTotal === desiredAmount
+        ? selectedQuotes.reduce((total, quote) => {
+            return total + quote.requiredOutputAmounts[0] / quote.pseudoOutputAmount;
+        }, 0) / selectedQuotes.length
+        : "Insufficient depth of book";
 
     return [selectedQuotes, selectedRatio];
 };
+
 
 
 const selectQuotesForAllAmounts = (amounts, quotes) => {
@@ -191,13 +201,13 @@ const selectQuotesForAllAmounts = (amounts, quotes) => {
 
 function groupByPair(quotes) {
     return quotes.reduce((result, quote) => {
-      const { base_token_id, counter_token_id } = quote.pair;
-      const group = `${base_token_id.toString()}_${counter_token_id.toString()}`;
-      result[group] = result[group] || [];
-      result[group].push(quote);
-      return result;
+        const { base_token_id, counter_token_id } = quote.pair;
+        const group = `${base_token_id.toString()}_${counter_token_id.toString()}`;
+        result[group] = result[group] || [];
+        result[group].push(quote);
+        return result;
     }, {});
-  }
+}
 
 const groupBy = (items, key) => {
     return items.reduce((result, item) => {
@@ -318,12 +328,12 @@ function buildGetQuotesRequests() {
         distinctPairs.add(`${baseTokenId}_${counterTokenId}`); // Add the current pair to the set
     });
     console.log(`Distinct pairs: ${Array.from(distinctPairs).join(", ")}`); // Log the distinct pairs
-
+    // console.log(`Quotes: ${requests}`);
     return requests;
 }
 
-function handleGetQuotesResponse(response, setQuotes, countRef) {
-    const newQuotesData = [];
+function handleGetQuotesResponse(response, setQuotesMap, countRef) {
+    const newQuotesData = new Map();
     const quotesList = response.getQuotesList();
     quotesList.forEach((quote) => {
         const id = quote.getId().toString();
@@ -353,14 +363,27 @@ function handleGetQuotesResponse(response, setQuotes, countRef) {
             pseudoOutputAmount,
         };
 
-        newQuotesData.push(quoteData);
+        const quoteKey = `${base_token_id}_${counter_token_id}`;
+        if (newQuotesData.has(quoteKey)) {
+            console.log("new quotes data has quoteKey:", quoteKey);
+            newQuotesData.get(quoteKey).push(quoteData);
+        } else {
+            console.log("new quotes data does not have quoteKey:", quoteKey);
+            newQuotesData.set(quoteKey, [quoteData]);
+        }
     });
-
-    setQuotes(prevQuotes => [...prevQuotes, ...newQuotesData]); // Append new quotes to existing quotes    
+    newQuotesData.forEach((quotesData, pairKey) => {
+        console.log("pairKey:", pairKey);
+        setQuotesMap((prevQuotesMap) => {
+            return prevQuotesMap.set(pairKey, quotesData);
+        });
+    });
     countRef.current++; // Increment the count
 }
 
-function sendGetQuotesRequests(client, requests, setQuotes, countRef) {
+
+
+function sendGetQuotesRequests(client, requests, setQuotesMap, countRef) {
     requests.forEach(({ request, baseTokenId, counterTokenId }) => {
         client.getQuotes(request, {}, (err, response) => {
             if (err) {
@@ -368,19 +391,19 @@ function sendGetQuotesRequests(client, requests, setQuotes, countRef) {
                 return;
             }
             console.log("received:" + response);
-            handleGetQuotesResponse(response, setQuotes, countRef);
+            handleGetQuotesResponse(response, setQuotesMap, countRef);
         });
     });
 }
 
 function QuoteList() {
-    const [quotes, setQuotes] = useState([]);
+    const [groupedQuotes, setQuotesMap] = useState(new Map());
     const [intervalId, setIntervalId] = useState(null);
     const countRef = useRef(0);
 
     const handleGetQuotes = () => {
         const requests = buildGetQuotesRequests();
-        sendGetQuotesRequests(client, requests, setQuotes, countRef);
+        sendGetQuotesRequests(client, requests, setQuotesMap, countRef);
     };
 
     // Call handleGetQuotes() every 30 seconds
@@ -406,25 +429,25 @@ function QuoteList() {
         };
     }, []);
 
-    // Process the quotes when they are updated.
-    useEffect(() => {
-        const groupedQuotes = groupByPair(quotes);
-        // Do something with the grouped quotes
-    }, [quotes]);
+    // // Process the quotes when they are updated.
+    // useEffect(() => {
+    //     const groupedQuotes = groupByPair(groupedQuotes);
+    //     // Do something with the grouped quotes
+    // }, [groupedQuotes]);
 
-    const groupedQuotes = groupByPair(quotes);
-    const numGroups = Object.keys(groupedQuotes).length;
+    // const groupedQuotes = groupByPair(groupedQuotes);
+    const numGroups = groupedQuotes.size;
 
     return (
         <div className="App">
             <header className="App-header">
                 <img src={logo} className="App-logo" alt="logo" style={{ width: '100px', height: '100px' }} />
                 <div>
-                <p>Number of different groups: {numGroups}</p>
+                    <p>Number of different groups: {groupedQuotes.size}</p>
                     <button onClick={handleGetQuotes}>Get Quotes</button>
                     <button onClick={stopPolling}>Stop Polling</button>
                     <ul>
-                        {Object.entries(groupedQuotes).map(([pair, quotes]) => (
+                        {[...groupedQuotes].map(([pair, quotes]) => (
                             <li key={pair} style={quoteIdStyle}>
                                 <ul>
                                     {quotes.map((quote) => (
