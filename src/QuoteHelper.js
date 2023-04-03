@@ -28,7 +28,7 @@ const areTokensInOrder = (token1, token2, priority = currencyPriority) => {
 const getTokenName = (token_id, priority = currencyPriority) => {
     const index = priority.findIndex(token => token.tokenId === token_id);
     return index !== -1 ? priority[index].name : token_id.toString();
-  };
+};
 
 
 const getTradingPairKey = (pair, priority = currencyPriority) => {
@@ -77,11 +77,14 @@ const selectQuotesForDesiredAmount = (desiredAmount, quotes) => {
     console.log(`IsBaseTokenFirst: ${isBaseTokenFirst}`);
     console.log(getTradingPairKey(quotes[0].pair));
     //The best quotes give the most stuff and require the least stuff.
-    const sortedQuotes = quotes.sort((a, b) =>  a.requiredOutputAmounts[0]/a.pseudoOutputAmount - b.requiredOutputAmounts[0]/b.pseudoOutputAmount);
+    const sortedQuotes = quotes.sort((a, b) => a.requiredOutputAmounts[0] / a.pseudoOutputAmount - b.requiredOutputAmounts[0] / b.pseudoOutputAmount);
     console.log(sortedQuotes);
     // If desiredAmount is 0, just return the best quote.
     if (desiredAmount === 0) {
-        return [sortedQuotes[0], localizeCurrency(isBaseTokenFirst, sortedQuotes[0].requiredOutputAmounts[0] / sortedQuotes[0].pseudoOutputAmount)];
+        return {
+            quotes: sortedQuotes[0],
+            price: localizeCurrency(isBaseTokenFirst, sortedQuotes[0].requiredOutputAmounts[0] / sortedQuotes[0].pseudoOutputAmount)
+        };
     }
 
 
@@ -114,11 +117,17 @@ const selectQuotesForDesiredAmount = (desiredAmount, quotes) => {
         return total + quote.requiredOutputAmounts[0]
     }, 0);
     if (selectedPseudoOutputTotal !== desiredAmount) {
-        return [selectedQuotes, "Insufficient depth of book"];
+        return {
+            quotes: selectedQuotes,
+            price: "Insufficient depth of book"
+        };
     }
     const selectedRatio = selectedRequiredOutputTotal / selectedPseudoOutputTotal;
 
-    return [selectedQuotes, localizeCurrency(isBaseTokenFirst, selectedRatio)];
+    return {
+        quotes: selectedQuotes,
+        price: localizeCurrency(isBaseTokenFirst, selectedRatio)
+    };
 };
 
 module.exports = {

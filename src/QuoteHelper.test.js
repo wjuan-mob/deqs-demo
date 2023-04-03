@@ -75,21 +75,22 @@ describe('selectQuotesForDesiredAmount', () => {
         }
     ];
     it('returns the best quote if desiredAmount is 0', () => {
-        const [selectedQuote, selectedRatio] = selectQuotesForDesiredAmount(0, [...mockQuotes]);
-        expect(selectedQuote).toEqual(mockQuotes[2]);
+        const { quotes: selectedQuotes, price: selectedRatio } = selectQuotesForDesiredAmount(0, [...mockQuotes]);
+        expect(selectedQuotes).toEqual(mockQuotes[2]);
         expect(selectedRatio).toEqual(5);
     });
 
 
     it('returns the quotes that add up to desiredAmount', () => {
-        const [selectedQuote, selectedRatio] = selectQuotesForDesiredAmount(60, [...mockQuotes]);
-        expect(selectedQuote).toEqual([mockQuotes[2], mockQuotes[0]]);
+        const { quotes: selectedQuotes, price: selectedRatio } = selectQuotesForDesiredAmount(60, [...mockQuotes]);
+        expect(selectedQuotes).toEqual([mockQuotes[2], mockQuotes[0]]);
         expect(selectedRatio).toEqual(60 / 40);
     });
 
+
     it('returns a prorated quote if the sum of the selected quotes exceeds desiredAmount', () => {
-        const [selectedQuote, selectedRatio] = selectQuotesForDesiredAmount(35, [...mockQuotes]);
-        expect(selectedQuote).toEqual([{
+        const { quotes: selectedQuotes, price: selectedRatio } = selectQuotesForDesiredAmount(35, [...mockQuotes]);
+        expect(selectedQuotes).toEqual([{
             pair: {
                 base_token_id: 1,
                 counter_token_id: 2,
@@ -101,7 +102,7 @@ describe('selectQuotesForDesiredAmount', () => {
     });
 
     it('returns depth of book if the sum of the selected quotes is less than desiredAmount', () => {
-        const [selectedQuotes, selectedRatio] = selectQuotesForDesiredAmount(100, mockQuotes);
+        const { quotes: selectedQuotes, price: selectedRatio } = selectQuotesForDesiredAmount(100, mockQuotes);
         expect(selectedQuotes).toEqual([mockQuotes[0], mockQuotes[1], mockQuotes[2]]);
         expect(selectedRatio).toEqual('Insufficient depth of book');
     });
