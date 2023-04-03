@@ -2,13 +2,21 @@ import React, { Component, useState, useEffect, useRef } from 'react';
 import logo from './logo.png';
 import currency_config from './currency_config.json';
 import { Tooltip } from 'react-tooltip';
-import { getPairKey } from './QuoteHelper';
+import { compareTokens, getPairKey, getTokenName } from './QuoteHelper';
 
 const { DeqsClientAPIClient } = require('./deqs_grpc_web_pb.js');
 const { Pair, GetQuotesRequest, GetQuotesResponse, Quote } = require('./deqs_pb.js');
 const { SignedContingentInput } = require('./external_pb.js');
 const { PingPongClient } = require('./deqs_grpc_web_pb');
 const { PingRequest, PongResponse } = require('./deqs_pb.js');
+
+const Amounts = [0, 1, 2, 3, 4, 5];
+
+const currencyPriority = [
+    { name: "GBP", tokenId: 0 },
+    { name: "EUR", tokenId: 1 },
+    { name: "USD", tokenId: 2 }
+];
 
 const enableDevTools = window.__GRPCWEB_DEVTOOLS__ || (() => {
 });
@@ -133,6 +141,14 @@ const sortQuotesByQuantity = (quotes) => {
     });
 };
 
+const localizeCurrency = (bool, num) => {
+    if (bool) {
+        return num;
+    } else {
+        return 1 / num;
+    }
+}
+
 // This function selects quotes from an array using the pseudoOutputAmounts to fulfill the desired amount
 // The function takes in two parameters:
 // 1. desiredAmount: a number representing the desired quantity of pseudoOutputAmount
@@ -151,10 +167,14 @@ const selectQuotesForDesiredAmount = (desiredAmount, quotes) => {
         return null;
     }
 
+    const baseToken = quotes[0].pair.base_token_id;
+    const counterToken = quotes[0].pair.counter_token_id;
+    const isBaseTokenFirst = compareTokens(baseToken, counterToken, currencyPriority) < 0;
+
     // If desiredAmount is 0, just return the best quote.
     if (desiredAmount === 0) {
         const sortedQuotes = quotes.sort((a, b) => a.requiredOutputAmounts[0] / a.pseudoOutputAmount - b.requiredOutputAmounts[0] / b.pseudoOutputAmount);
-        return [sortedQuotes[0], sortedQuotes[0].requiredOutputAmounts[0] / sortedQuotes[0].pseudoOutputAmount];
+        return [sortedQuotes[0], localizeCurrency(isBaseTokenFirst, sortedQuotes[0].requiredOutputAmounts[0] / sortedQuotes[0].pseudoOutputAmount)];
     }
 
     const sortedQuotes = quotes.sort((a, b) => a.requiredOutputAmounts[0] / a.pseudoOutputAmount - b.requiredOutputAmounts[0] / b.pseudoOutputAmount);
@@ -183,20 +203,31 @@ const selectQuotesForDesiredAmount = (desiredAmount, quotes) => {
     const selectedPseudoOutputTotal = selectedQuotes.reduce((total, quote) => {
         return total + quote.pseudoOutputAmount;
     }, 0);
+    const selectedRequiredOutputTotal = selectedQuotes.reduce((total, quote) => {
+        return total + quote.requiredOutputAmounts[0]
+    }, 0);
+    if (selectedPseudoOutputTotal !== desiredAmount) {
+        return [selectedQuotes, "Insufficient depth of book"];
+    }
+    const selectedRatio = selectedRequiredOutputTotal / selectedPseudoOutputTotal;
 
-    const selectedRatio = selectedPseudoOutputTotal === desiredAmount
-        ? selectedQuotes.reduce((total, quote) => {
-            return total + quote.requiredOutputAmounts[0] / quote.pseudoOutputAmount;
-        }, 0) / selectedQuotes.length
-        : "Insufficient depth of book";
-
-    return [selectedQuotes, selectedRatio];
+    return [selectedQuotes, localizeCurrency(isBaseTokenFirst, selectedRatio)];
 };
 
 
 
-const selectQuotesForAllAmounts = (amounts, quotes) => {
-    return amounts.map(amount => selectQuotesForDesiredAmount(amount, quotes));
+const bucketizeQuotesForAllAmounts = (amounts, pairToQuotesMap) => {
+    const result = {};
+
+    for (const [pair, quotes] of Object.entries(pairToQuotesMap)) {
+        const selectedQuotesMap = {};
+        for (const amount of amounts) {
+            selectedQuotesMap[amount] = selectQuotesForDesiredAmount(amount, quotes);
+        }
+        result[pair] = selectedQuotesMap;
+    }
+
+    return result;
 };
 
 function groupByPair(quotes) {
@@ -437,6 +468,7 @@ function QuoteList() {
 
     // const groupedQuotes = groupByPair(groupedQuotes);
     const numGroups = groupedQuotes.size;
+    const buckets = bucketizeQuotesForAllAmounts(Amounts, groupedQuotes);
 
     return (
         <div className="App">
