@@ -2,7 +2,7 @@ import React, { Component, useState, useEffect, useRef } from 'react';
 import logo from './logo.png';
 import currency_config from './currency_config.json';
 import { Tooltip } from 'react-tooltip';
-import { getTradingPairKey, getTokenName, selectQuotesForDesiredAmount } from './QuoteHelper';
+import { areTokensInOrder, getTradingPairKey, getTokenName, selectQuotesForDesiredAmount } from './QuoteHelper';
 
 const { DeqsClientAPIClient } = require('./deqs_grpc_web_pb.js');
 const { Pair, GetQuotesRequest, GetQuotesResponse, Quote } = require('./deqs_pb.js');
@@ -397,10 +397,14 @@ function buildCurrencyPriceBuckets() {
         currencyAmountMap[tradingPair] = {};
         Amounts.forEach((quantity) => {
             const key = parseFloat(quantity);
+            const bid_key = JSON.stringify(areTokensInOrder(baseTokenId, counterTokenId) ? config_pair : {base_token_id: counterTokenId, counter_token_id: baseTokenId});
+            const ask_key = JSON.stringify(areTokensInOrder(baseTokenId, counterTokenId) ? {base_token_id: counterTokenId, counter_token_id: baseTokenId} : config_pair);
             currencyAmountMap[tradingPair][key] = {
                 bid: null,
                 ask: null,
                 config_pair,
+                bid_key,
+                ask_key,
                 quantity,
             };
         });
@@ -408,21 +412,42 @@ function buildCurrencyPriceBuckets() {
     return currencyAmountMap;
 }
 
-function updateCurrencyMap(currencyMap) {
-    const updatedCurrencyMap = {};
-    Object.entries(currencyMap).forEach(([key, { currency, amount, bid, ask }]) => {
-        const newBid = bid * (1 + Math.random() * 0.02 - 0.01); // Randomly adjust bid up or down by up to 2%
-        const newAsk = ask * (1 + Math.random() * 0.02 - 0.01); // Randomly adjust ask up or down by up to 2%
-        updatedCurrencyMap[key] = {
-            currency,
-            amount,
-            bid: newBid,
-            ask: newAsk,
-        };
-    });
-    return updatedCurrencyMap;
-}
 
+function updateCurrencyMap(currencyMap, updatedBucketsMap) {
+    console.log("inside update currencyMap");
+    for (let key in updatedBucketsMap) {
+        if (updatedBucketsMap.hasOwnProperty(key)) {
+          console.log("updatedBucketsMap has key:" + JSON.stringify(key));
+        }
+      }
+    for (let key in currencyMap) {
+      let amountMap = currencyMap[key];
+      for (let amount in amountMap) {
+        let entry = amountMap[amount];
+        let bid_key = entry.bid_key;
+        console.log("bid_key"+JSON.stringify(bid_key));
+        if (updatedBucketsMap.hasOwnProperty(bid_key)) {
+            console.log("had own property bid_key");
+        }
+        for (let key in updatedBucketsMap[bid_key]) {
+            if (updatedBucketsMap[bid_key].hasOwnProperty(key)) {
+              console.log("amount_key: updatedBucketsMap[bid_key] has key:" + JSON.stringify(key));
+            }
+          }
+        console.log("amount_key: "+JSON.stringify(amount))
+        if (updatedBucketsMap.hasOwnProperty(bid_key) && updatedBucketsMap[bid_key].hasOwnProperty(amount)) {
+            console.log("updated bucket and amount_key");
+            entry.bid = updatedBucketsMap[bid_key][amount].price;
+        }
+        let ask_key = entry.ask_key;
+        if (updatedBucketsMap.hasOwnProperty(ask_key) && updatedBucketsMap[ask_key].hasOwnProperty(amount)) {
+          entry.ask = updatedBucketsMap[ask_key][amount].price;
+        }
+      }
+    }
+    return currencyMap;
+  }
+  
 
 function QuoteList() {
     const [groupedQuotes, setQuotesMap] = useState(new Map());
@@ -469,7 +494,8 @@ function QuoteList() {
     const numGroups = groupedQuotes.size;
     const buckets = bucketizeQuotesForAllAmounts(Amounts, groupedQuotes);
     console.log("Buckets content:", JSON.stringify(buckets, null, 2));
-
+    updateCurrencyMap(currencyAmountMap, buckets);
+    console.log("currencyAmountMap content:", JSON.stringify(currencyAmountMap, null, 2));
     const bucketsArray = Array.from(buckets);
     return (
         <div className="App">
@@ -479,10 +505,6 @@ function QuoteList() {
                     <p>Number of different groups: {groupedQuotes.size}</p>
                     <button onClick={handleGetQuotes}>Get Quotes</button>
                     <button onClick={stopPolling}>Stop Polling</button>
-                    <div>
-                        <h2>Currency Map:</h2>
-                        <pre>{JSON.stringify(currencyAmountMap, null, 2)}</pre>
-                    </div>
                     <div className="item-list" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', padding: '10px' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gridGap: '10px' }}>
                             {Object.keys(currencyAmountMap).map((currency) => (
