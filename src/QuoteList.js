@@ -204,11 +204,11 @@ const smallTextStyle = {
 
 const renderItemName = (name) => {
     const MAX_LENGTH = 5;
-    const displayName = name.length > MAX_LENGTH ? `${name.slice(0, MAX_LENGTH)}...` : name;
+    const displayName = name ? (name.length > MAX_LENGTH ? `${name.slice(0, MAX_LENGTH)}...` : name) : 'null';
     return (
         <div>
             <Tooltip id={`tooltip-${name}`} place="bottom" effect="solid">
-                {name}
+                {name || 'null'}
             </Tooltip>
             <div data-tip data-for={`tooltip-${name}`}>
                 {displayName}
@@ -216,6 +216,7 @@ const renderItemName = (name) => {
         </div>
     );
 };
+
 
 export function ItemList({ items }) {
     const groupedItems = groupBy(items, 'pair');
@@ -387,10 +388,48 @@ function sendGetQuotesRequests(client, requests, setQuotesMap, countRef) {
     });
 }
 
+function buildCurrencyPriceBuckets() {
+    const currencyAmountMap = {};
+    currency_config.pairs.forEach((config_pair) => {
+        const baseTokenId = config_pair.base_token_id;
+        const counterTokenId = config_pair.counter_token_id;
+        const tradingPair = getTradingPairKey(config_pair);
+        currencyAmountMap[tradingPair] = {};
+        Amounts.forEach((quantity) => {
+            const key = parseFloat(quantity);
+            currencyAmountMap[tradingPair][key] = {
+                bid: null,
+                ask: null,
+                config_pair,
+                quantity,
+            };
+        });
+    });
+    return currencyAmountMap;
+}
+
+function updateCurrencyMap(currencyMap) {
+    const updatedCurrencyMap = {};
+    Object.entries(currencyMap).forEach(([key, { currency, amount, bid, ask }]) => {
+        const newBid = bid * (1 + Math.random() * 0.02 - 0.01); // Randomly adjust bid up or down by up to 2%
+        const newAsk = ask * (1 + Math.random() * 0.02 - 0.01); // Randomly adjust ask up or down by up to 2%
+        updatedCurrencyMap[key] = {
+            currency,
+            amount,
+            bid: newBid,
+            ask: newAsk,
+        };
+    });
+    return updatedCurrencyMap;
+}
+
+
 function QuoteList() {
     const [groupedQuotes, setQuotesMap] = useState(new Map());
     const [intervalId, setIntervalId] = useState(null);
     const countRef = useRef(0);
+    // Create a map of currency and amount pairs
+    const currencyAmountMap = buildCurrencyPriceBuckets();
 
     const handleGetQuotes = () => {
         const requests = buildGetQuotesRequests();
@@ -440,6 +479,33 @@ function QuoteList() {
                     <p>Number of different groups: {groupedQuotes.size}</p>
                     <button onClick={handleGetQuotes}>Get Quotes</button>
                     <button onClick={stopPolling}>Stop Polling</button>
+                    <div>
+                        <h2>Currency Map:</h2>
+                        <pre>{JSON.stringify(currencyAmountMap, null, 2)}</pre>
+                    </div>
+                    <div className="item-list" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', padding: '10px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gridGap: '10px' }}>
+                            {Object.keys(currencyAmountMap).map((currency) => (
+                                <div key={currency} className="item-group" style={{ backgroundColor: 'white', borderRadius: '5px', padding: '10px' }}>
+                                    <h2>{currency}</h2>
+                                    {Object.keys(currencyAmountMap[currency]).map((amount) => (
+                                        <div key={amount} style={{ ...truncatedStyle, ...smallTextStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', backgroundColor: 'transparent' }}>
+                                            <div style={{ backgroundColor: 'rgba(120, 220, 140, 0.8)', padding: '10px', borderRadius: '5px' }}>
+                                                <h3>Bid</h3>
+                                                <div>{renderItemName(currencyAmountMap[currency][amount].bid)}</div>
+                                            </div>
+                                            <div style={{ fontSize: '24px', margin: '0 10px' }}>{amount}</div>
+                                            <div style={{ backgroundColor: 'rgba(220, 120, 140, 0.8)', padding: '10px', borderRadius: '5px' }}>
+                                                <h3>Ask</h3>
+                                                <div>{renderItemName(currencyAmountMap[currency][amount].ask)}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
                     <ul>
                         {[...groupedQuotes].map(([pair, quotes]) => (
                             <li key={pair} style={quoteIdStyle}>
