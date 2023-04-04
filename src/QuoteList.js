@@ -62,90 +62,6 @@ const groupHeaderStyle = {
     marginBottom: '10px',
 };
 
-const groupQuotesByQuantityAndPair = (quotes) => {
-    return quotes.reduce((result, quote) => {
-        const quantity = quote.quantity;
-        const pair = quote.pairs[0];
-        const pairKey = getTradingPairKey(pair);
-        result[quantity] = result[quantity] || {};
-        result[quantity][pairKey] = result[quantity][pairKey] || [];
-        result[quantity][pairKey].push(quote);
-        return result;
-    }, {});
-};
-
-const sortQuotesByBaseCurrency = (quotes, priority) => {
-    const priorityMap = priority.reduce((map, currency, index) => {
-        map[currency] = index;
-        return map;
-    }, {});
-
-    return quotes.sort((quote1, quote2) => {
-        const base1 = quote1.pairs[0].base_currency;
-        const base2 = quote2.pairs[0].base_currency;
-        const basePriority1 = priorityMap[base1] || Infinity;
-        const basePriority2 = priorityMap[base2] || Infinity;
-
-        if (basePriority1 < basePriority2) {
-            return -1;
-        } else if (basePriority1 > basePriority2) {
-            return 1;
-        } else {
-            return 0;
-        }
-    });
-};
-
-
-
-const combineQuotesIntoBuckets = (values, quotes) => {
-    // Group quotes by quantity and pair
-    const quantityQuotes = groupQuotesByQuantityAndPair(quotes);
-
-    // Combine quotes for each quantity and pair
-    const combinedQuotes = Object.keys(quantityQuotes).map((quantity) => {
-        const pairQuotes = quantityQuotes[quantity];
-        const pair = pairQuotes[0].pairs[0];
-        const pairKey = getTradingPairKey(pair);
-        const sortedPairQuotes = sortQuotesByBaseCurrency(pairQuotes, currencyPriority);
-        const bid = sortedPairQuotes[0].price;
-        const ask = sortedPairQuotes[1].price;
-        return {
-            quantity,
-            pair_key: pairKey,
-            bid,
-            ask,
-        };
-    });
-
-    // Filter out combined quotes with invalid bid/ask
-    const filteredQuotes = combinedQuotes.filter(({ bid, ask }) => {
-        return bid > 0 && ask > 0 && bid < ask;
-    });
-
-    // Sort combined quotes by value and quantity
-    const sortedQuotes = sortQuotesByQuantity(filteredQuotes);
-
-    return sortedQuotes;
-};
-
-const sortQuotesByQuantity = (quotes) => {
-    return quotes.sort((quote1, quote2) => {
-        if (quote1.quantity < quote2.quantity) {
-            return -1;
-        } else if (quote1.quantity > quote2.quantity) {
-            return 1;
-        } else {
-            return 0;
-        }
-    });
-};
-
-
-
-
-
-
 const bucketizeQuotesForAllAmounts = (amounts, pairToQuotesMap) => {
     const result = {};
     console.log("inside buckets");
@@ -165,17 +81,6 @@ const bucketizeQuotesForAllAmounts = (amounts, pairToQuotesMap) => {
     }
     return result;
 };
-
-
-function groupByPair(quotes) {
-    return quotes.reduce((result, quote) => {
-        const { base_token_id, counter_token_id } = quote.pair;
-        const group = `${base_token_id.toString()}_${counter_token_id.toString()}`;
-        result[group] = result[group] || [];
-        result[group].push(quote);
-        return result;
-    }, {});
-}
 
 const groupBy = (items, key) => {
     return items.reduce((result, item) => {
@@ -365,6 +270,7 @@ function handleGetQuotesResponse(response, setQuotesMap, countRef) {
     });
     newQuotesData.forEach((quotesData, pairKey) => {
         setQuotesMap((prevQuotesMap) => {
+            console.log("updated quotes map");
             return prevQuotesMap.set(pairKey, quotesData);
         });
     });
@@ -397,11 +303,13 @@ function buildCurrencyPriceBuckets() {
         currencyAmountMap[tradingPair] = {};
         Amounts.forEach((quantity) => {
             const key = parseFloat(quantity);
-            const bid_key = JSON.stringify(areTokensInOrder(baseTokenId, counterTokenId) ? config_pair : {base_token_id: counterTokenId, counter_token_id: baseTokenId});
-            const ask_key = JSON.stringify(areTokensInOrder(baseTokenId, counterTokenId) ? {base_token_id: counterTokenId, counter_token_id: baseTokenId} : config_pair);
+            const bid_key = JSON.stringify(areTokensInOrder(baseTokenId, counterTokenId) ? config_pair : { base_token_id: counterTokenId, counter_token_id: baseTokenId });
+            const ask_key = JSON.stringify(areTokensInOrder(baseTokenId, counterTokenId) ? { base_token_id: counterTokenId, counter_token_id: baseTokenId } : config_pair);
             currencyAmountMap[tradingPair][key] = {
                 bid: null,
                 ask: null,
+                bid_quotes: null,
+                ask_quotes: null,
                 config_pair,
                 bid_key,
                 ask_key,
@@ -417,37 +325,39 @@ function updateCurrencyMap(currencyMap, updatedBucketsMap) {
     console.log("inside update currencyMap");
     for (let key in updatedBucketsMap) {
         if (updatedBucketsMap.hasOwnProperty(key)) {
-          console.log("updatedBucketsMap has key:" + JSON.stringify(key));
+            console.log("updatedBucketsMap has key:" + JSON.stringify(key));
         }
-      }
+    }
     for (let key in currencyMap) {
-      let amountMap = currencyMap[key];
-      for (let amount in amountMap) {
-        let entry = amountMap[amount];
-        let bid_key = entry.bid_key;
-        console.log("bid_key"+JSON.stringify(bid_key));
-        if (updatedBucketsMap.hasOwnProperty(bid_key)) {
-            console.log("had own property bid_key");
-        }
-        for (let key in updatedBucketsMap[bid_key]) {
-            if (updatedBucketsMap[bid_key].hasOwnProperty(key)) {
-              console.log("amount_key: updatedBucketsMap[bid_key] has key:" + JSON.stringify(key));
+        let amountMap = currencyMap[key];
+        for (let amount in amountMap) {
+            let entry = amountMap[amount];
+            let bid_key = entry.bid_key;
+            console.log("bid_key" + JSON.stringify(bid_key));
+            if (updatedBucketsMap.hasOwnProperty(bid_key)) {
+                console.log("had own property bid_key");
             }
-          }
-        console.log("amount_key: "+JSON.stringify(amount))
-        if (updatedBucketsMap.hasOwnProperty(bid_key) && updatedBucketsMap[bid_key].hasOwnProperty(amount)) {
-            console.log("updated bucket and amount_key");
-            entry.bid = updatedBucketsMap[bid_key][amount].price;
+            for (let key in updatedBucketsMap[bid_key]) {
+                if (updatedBucketsMap[bid_key].hasOwnProperty(key)) {
+                    console.log("amount_key: updatedBucketsMap[bid_key] has key:" + JSON.stringify(key));
+                }
+            }
+            console.log("amount_key: " + JSON.stringify(amount))
+            if (updatedBucketsMap.hasOwnProperty(bid_key) && updatedBucketsMap[bid_key].hasOwnProperty(amount)) {
+                console.log("updated bucket and amount_key");
+                entry.bid = updatedBucketsMap[bid_key][amount].price;
+                entry.bid_quotes = updatedBucketsMap[bid_key][amount].quotes;
+            }
+            let ask_key = entry.ask_key;
+            if (updatedBucketsMap.hasOwnProperty(ask_key) && updatedBucketsMap[ask_key].hasOwnProperty(amount)) {
+                entry.ask = updatedBucketsMap[ask_key][amount].price;
+                entry.ask_quotes = updatedBucketsMap[ask_key][amount].quotes;
+            }
         }
-        let ask_key = entry.ask_key;
-        if (updatedBucketsMap.hasOwnProperty(ask_key) && updatedBucketsMap[ask_key].hasOwnProperty(amount)) {
-          entry.ask = updatedBucketsMap[ask_key][amount].price;
-        }
-      }
     }
     return currencyMap;
-  }
-  
+}
+
 
 function QuoteList() {
     const [groupedQuotes, setQuotesMap] = useState(new Map());
@@ -461,12 +371,18 @@ function QuoteList() {
         sendGetQuotesRequests(client, requests, setQuotesMap, countRef);
     };
 
-    // Call handleGetQuotes() every 30 seconds
+    // Call handleGetQuotes() every 3 seconds
     const startPolling = () => {
+        handleGetQuotes(); // call handleGetQuotes right away
         const id = setInterval(() => {
             handleGetQuotes();
-        }, 30000);
-        setIntervalId(id);
+            setIntervalId(id);
+            console.log("groupedQuotes content:", JSON.stringify(groupedQuotes, null, 2));
+            const buckets = bucketizeQuotesForAllAmounts(Amounts, groupedQuotes);
+            console.log("Buckets content:", JSON.stringify(buckets, null, 2));
+            updateCurrencyMap(currencyAmountMap, buckets);
+            console.log("currencyAmountMap content:", JSON.stringify(currencyAmountMap, null, 2));    
+        }, 3000);
     };
 
     const stopPolling = () => {
@@ -483,28 +399,31 @@ function QuoteList() {
             }
         };
     }, []);
-
-    // // Process the quotes when they are updated.
-    // useEffect(() => {
-    //     const groupedQuotes = groupByPair(groupedQuotes);
-    //     // Do something with the grouped quotes
-    // }, [groupedQuotes]);
-
-    // const groupedQuotes = groupByPair(groupedQuotes);
-    const numGroups = groupedQuotes.size;
+    console.log("groupedQuotes content:", JSON.stringify(groupedQuotes, null, 2));
     const buckets = bucketizeQuotesForAllAmounts(Amounts, groupedQuotes);
     console.log("Buckets content:", JSON.stringify(buckets, null, 2));
     updateCurrencyMap(currencyAmountMap, buckets);
     console.log("currencyAmountMap content:", JSON.stringify(currencyAmountMap, null, 2));
-    const bucketsArray = Array.from(buckets);
     return (
         <div className="App">
             <header className="App-header">
                 <img src={logo} className="App-logo" alt="logo" style={{ width: '100px', height: '100px' }} />
                 <div>
                     <p>Number of different groups: {groupedQuotes.size}</p>
-                    <button onClick={handleGetQuotes}>Get Quotes</button>
-                    <button onClick={stopPolling}>Stop Polling</button>
+                    {intervalId ? (
+                        <button onClick={stopPolling}>Stop Polling</button>
+                    ) : (
+                        <button onClick={startPolling}>Start Polling</button>
+                    )}
+                    {intervalId ? (
+                        <div>
+                            <p>Polling is currently running...</p>
+                        </div>
+                    ) : (
+                        <div>
+                            <p>Polling is currently stopped.</p>
+                        </div>
+                    )}
                     <div className="item-list" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', padding: '10px' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gridGap: '10px' }}>
                             {Object.keys(currencyAmountMap).map((currency) => (
@@ -527,42 +446,6 @@ function QuoteList() {
                             ))}
                         </div>
                     </div>
-
-                    <ul>
-                        {[...groupedQuotes].map(([pair, quotes]) => (
-                            <li key={pair} style={quoteIdStyle}>
-                                <ul>
-                                    {quotes.map((quote) => (
-                                        <li key={quote.id}>
-                                            <span style={quoteItemStyle}>Pair:</span> {pair}
-                                            <br />
-                                            <span style={quoteItemStyle}>Block Version:</span> {quote.blockVersion}
-                                            <br />
-                                            Required Output Amount: <br />
-                                            <ul>
-                                                <li>
-                                                    Amount: {quote.requiredOutputAmounts.amount}
-                                                    <br />
-                                                    Token Id: {quote.requiredOutputAmounts.tokenId}
-                                                    <br />
-                                                </li>
-                                            </ul>
-                                            Pseudo Output Amount: <br />
-                                            <ul>
-                                                <li>
-                                                    Amount: {quote.pseudoOutputAmount.amount}
-                                                    <br />
-                                                    Token Id: {quote.pseudoOutputAmount.tokenId}
-                                                    <br />
-                                                </li>
-                                            </ul>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </li>
-                        ))}
-                    </ul>
-                    <pre>{JSON.stringify(buckets, null, 2)}</pre>
                 </div>
             </header>
         </div>
