@@ -533,39 +533,78 @@ function QuoteList() {
                                 <h2>{pair}</h2>
                                 <div className="bid-container">
                                     <h3>Bid</h3>
-                                    {quoteBook[pair].bid_quotes.map((quote) => (
-                                        <div key={quote.id} className="quote-container">
-                                            <div className="amount">{quote.amount}</div>
-                                            <div
-                                                className="bid-bar"
-                                                style={{
-                                                    backgroundColor: `rgba(46, 204, 113, 0.8)`,
-                                                    width: `${(quote.amount / quoteBook[pair].bid_depth) * 100}%`,
-                                                }}
-                                            />
-                                            <div className="price">{quote.price}</div>
+                                    <div className="quote-header">
+                                        <div className="amount-header">Amount</div>
+                                        <div className="price-header">Price</div>
+                                    </div>
+                                    <div className="quotes-container">
+                                        <div className="amounts-column">
+                                            {quoteBook[pair].bid_quotes.map((quote) => (
+                                                <div key={quote.id} className="amount-container">
+                                                    <div className="amount-bar-container">
+                                                        <div className="amount-header">{quote.amount}</div>
+                                                        <div
+                                                            className="bid-bar"
+                                                            style={{
+                                                                "--bar-width": `${(quote.amount / quoteBook[pair].bid_depth) * 100}%`,
+                                                            }}
+                                                        >
+                                                            <div className="amount">{quote.amount}</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
+                                        <div className="prices-column">
+                                            {quoteBook[pair].bid_quotes.map((quote) => (
+                                                <div key={quote.id} className="price-container">
+                                                    <div className="price">{quote.price}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                                 <div className="ask-container">
                                     <h3>Ask</h3>
-                                    {quoteBook[pair].ask_quotes.map((quote) => (
-                                        <div key={quote.id} className="quote-container">
-                                            <div className="amount">{quote.amount}</div>
-                                            <div
-                                                className="ask-bar"
-                                                style={{
-                                                    backgroundColor: `rgba(231, 76, 60, 0.8)`,
-                                                    width: `${(quote.amount / quoteBook[pair].ask_depth) * 100}%`,
-                                                }}
-                                            />
-                                            <div className="price">{quote.price}</div>
+                                    <div className="quote-header">
+                                        <div className="amount-header">Amount</div>
+                                        <div className="price-header">Price</div>
+                                    </div>
+                                    <div className="quotes-container">
+                                        <div className="amounts-column">
+                                            {quoteBook[pair].ask_quotes.map((quote) => (
+                                                <div key={quote.id} className="amount-container">
+                                                    <div className="amount-bar-container">
+                                                        <div className="amount-header">{quote.amount}</div>
+                                                        <div
+                                                            className="ask-bar"
+                                                            style={{
+                                                                "--bar-width": `${(quote.amount / quoteBook[pair].ask_depth) * 100}%`,
+                                                            }}
+                                                        >
+                                                            <div className="amount">{quote.amount}</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
+                                        <div className="prices-column">
+                                            {quoteBook[pair].ask_quotes.map((quote) => (
+                                                <div key={quote.id} className="price-container">
+                                                    <div className="price">{quote.price}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         ))}
                     </div>
+
+
+
+
+
 
 
 
