@@ -3,6 +3,8 @@ import logo from './logo.png';
 import currency_config from './currency_config.json';
 import { Tooltip } from 'react-tooltip';
 import { areTokensInOrder, getTradingPairKey, getTokenName, selectQuotesForDesiredAmount } from './QuoteHelper';
+import './QuoteList.css';
+
 
 const { DeqsClientAPIClient } = require('./deqs_grpc_web_pb.js');
 const { Pair, GetQuotesRequest, GetQuotesResponse, Quote } = require('./deqs_pb.js');
@@ -32,7 +34,6 @@ const quoteIdStyle = {
 const quoteItemStyle = {
     fontWeight: 'bold'
 }
-
 
 const boxesWithScrollbarStyle = {
     border: '1px solid black',
@@ -419,11 +420,11 @@ function updateCurrencyMap(currencyMap, setCurrencyAmountMap, updatedBucketsMap)
             let updatedBidQuotes = entry.bid_quotes;
             let updatedAsk = entry.ask;
             let updatedAskQuotes = entry.ask_quotes;
-            if (updatedBucketsMap.hasOwnProperty(bidKey) && updatedBucketsMap[bidKey] !== null  && updatedBucketsMap[bidKey].hasOwnProperty(amount)) {
+            if (updatedBucketsMap.hasOwnProperty(bidKey) && updatedBucketsMap[bidKey] !== null && updatedBucketsMap[bidKey].hasOwnProperty(amount)) {
                 updatedBid = updatedBucketsMap[bidKey][amount].price;
                 updatedBidQuotes = updatedBucketsMap[bidKey][amount].quotes;
             }
-            if (updatedBucketsMap.hasOwnProperty(askKey) && updatedBucketsMap[askKey] !== null  && updatedBucketsMap[askKey].hasOwnProperty(amount)) {
+            if (updatedBucketsMap.hasOwnProperty(askKey) && updatedBucketsMap[askKey] !== null && updatedBucketsMap[askKey].hasOwnProperty(amount)) {
                 updatedAsk = updatedBucketsMap[askKey][amount].price;
                 updatedAskQuotes = updatedBucketsMap[askKey][amount].quotes;
             }
@@ -506,31 +507,55 @@ function QuoteList() {
                             <p>Polling is currently stopped.</p>
                         </div>
                     )}
-                    <div className="quotebook-container">
+
+                    <div className="quotebook-container white-text">
                         {Object.keys(quoteBook).map((pair) => (
                             <div key={pair} className="pair-container">
                                 <h2>{pair}</h2>
-                                <div className="bid-container">
+                                <div className="bid-container" style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', alignItems: 'center' }}>
                                     <h3>Bid</h3>
                                     {quoteBook[pair].bid_quotes.map((quote) => (
-                                        <div key={quote.id}>
-                                            <p>Price: {quote.price}</p>
-                                            <p>Amount: {quote.amount}</p>
-                                        </div>
+                                        <React.Fragment key={quote.id}>
+                                            <div className="bid-text">
+                                                <p>Amount: {quote.amount}</p>
+                                            </div>
+                                            <div
+                                                className="bid-bar"
+                                                style={{
+                                                    width: `${quote.amount}%`,
+                                                    backgroundColor: `rgba(46, 204, 113, ${quote.amount / 100})`,
+                                                }}
+                                            >
+                                                <p className="price">{quote.price}</p>
+                                            </div>
+                                        </React.Fragment>
                                     ))}
                                 </div>
-                                <div className="ask-container">
+                                <div className="ask-container" style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center' }}>
                                     <h3>Ask</h3>
                                     {quoteBook[pair].ask_quotes.map((quote) => (
-                                        <div key={quote.id}>
-                                            <p>Price: {quote.price}</p>
-                                            <p>Amount: {quote.amount}</p>
-                                        </div>
+                                        <React.Fragment key={quote.id}>
+                                            <div
+                                                className="ask-bar"
+                                                style={{
+                                                    width: `${quote.amount}%`,
+                                                    backgroundColor: `rgba(231, 76, 60, ${quote.amount / 100})`,
+                                                }}
+                                            >
+                                                <p className="price">{quote.price}</p>
+                                            </div>
+                                            <div className="ask-text">
+                                                <p>Amount: {quote.amount}</p>
+                                            </div>
+                                        </React.Fragment>
                                     ))}
                                 </div>
                             </div>
                         ))}
                     </div>
+
+
+
 
                     <div className="item-list" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', padding: '10px' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gridGap: '10px' }}>
