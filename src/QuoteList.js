@@ -406,42 +406,41 @@ function updateQuotebook(quoteBook, setQuoteBook, pairToPriceMap) {
 
 
 
-function updateCurrencyMap(currencyMap, updatedBucketsMap) {
-    console.log("inside update currencyMap");
-    for (let key in updatedBucketsMap) {
-        if (updatedBucketsMap.hasOwnProperty(key)) {
-            console.log("updatedBucketsMap has key:" + JSON.stringify(key));
-        }
-    }
+function updateCurrencyMap(currencyMap, setCurrencyAmountMap, updatedBucketsMap) {
+    const updatedCurrencyMap = {};
     for (let key in currencyMap) {
-        let amountMap = currencyMap[key];
+        const amountMap = currencyMap[key];
+        const updatedAmountMap = {};
         for (let amount in amountMap) {
-            let entry = amountMap[amount];
-            let bid_key = entry.bid_key;
-            console.log("bid_key" + JSON.stringify(bid_key));
-            if (updatedBucketsMap.hasOwnProperty(bid_key)) {
-                console.log("had own property bid_key");
+            const entry = amountMap[amount];
+            const bidKey = entry.bid_key;
+            const askKey = entry.ask_key;
+            let updatedBid = entry.bid;
+            let updatedBidQuotes = entry.bid_quotes;
+            let updatedAsk = entry.ask;
+            let updatedAskQuotes = entry.ask_quotes;
+            if (updatedBucketsMap.hasOwnProperty(bidKey) && updatedBucketsMap[bidKey] !== null  && updatedBucketsMap[bidKey].hasOwnProperty(amount)) {
+                updatedBid = updatedBucketsMap[bidKey][amount].price;
+                updatedBidQuotes = updatedBucketsMap[bidKey][amount].quotes;
             }
-            for (let key in updatedBucketsMap[bid_key]) {
-                if (updatedBucketsMap[bid_key].hasOwnProperty(key)) {
-                    console.log("amount_key: updatedBucketsMap[bid_key] has key:" + JSON.stringify(key));
-                }
+            if (updatedBucketsMap.hasOwnProperty(askKey) && updatedBucketsMap[askKey] !== null  && updatedBucketsMap[askKey].hasOwnProperty(amount)) {
+                updatedAsk = updatedBucketsMap[askKey][amount].price;
+                updatedAskQuotes = updatedBucketsMap[askKey][amount].quotes;
             }
-            console.log("amount_key: " + JSON.stringify(amount))
-            if (updatedBucketsMap.hasOwnProperty(bid_key) && updatedBucketsMap[bid_key].hasOwnProperty(amount)) {
-                console.log("updated bucket and amount_key");
-                entry.bid = updatedBucketsMap[bid_key][amount].price;
-                entry.bid_quotes = updatedBucketsMap[bid_key][amount].quotes;
-            }
-            let ask_key = entry.ask_key;
-            if (updatedBucketsMap.hasOwnProperty(ask_key) && updatedBucketsMap[ask_key].hasOwnProperty(amount)) {
-                entry.ask = updatedBucketsMap[ask_key][amount].price;
-                entry.ask_quotes = updatedBucketsMap[ask_key][amount].quotes;
-            }
+            const updatedEntry = {
+                ...entry,
+                bid: updatedBid,
+                bid_quotes: updatedBidQuotes,
+                ask: updatedAsk,
+                ask_quotes: updatedAskQuotes
+            };
+            updatedAmountMap[amount] = updatedEntry;
         }
+        updatedCurrencyMap[key] = updatedAmountMap;
     }
-    return currencyMap;
+    setCurrencyAmountMap(updatedCurrencyMap);
 }
+
 
 
 function QuoteList() {
@@ -468,7 +467,7 @@ function QuoteList() {
             updateQuotebook(quoteBook, setQuoteBook, pairToQuotesMap);
             console.log("quoteBook content", JSON.stringify(quoteBook));
             const buckets = bucketizeQuotesForAllAmounts(Amounts, groupedQuotes);
-            updateCurrencyMap(currencyAmountMap, buckets);
+            updateCurrencyMap(currencyAmountMap, setCurrencyAmountMap, buckets);
         }, 3000);
         setIntervalId(id);
     };
@@ -487,11 +486,6 @@ function QuoteList() {
             }
         };
     }, []);
-    console.log("groupedQuotes content:", JSON.stringify(groupedQuotes, null, 2));
-    const buckets = bucketizeQuotesForAllAmounts(Amounts, groupedQuotes);
-    console.log("Buckets content:", JSON.stringify(buckets, null, 2));
-    updateCurrencyMap(currencyAmountMap, buckets);
-    console.log("currencyAmountMap content:", JSON.stringify(currencyAmountMap, null, 2));
     return (
         <div className="App">
             <header className="App-header">
