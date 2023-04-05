@@ -181,6 +181,25 @@ export function ItemList({ items }) {
     );
 };
 
+// function generateQuoteToPriceMap(currencyMap) {
+//     const quoteToPriceMap = {};
+
+//     for (const [quoteKey, quoteData] of Object.entries(currencyMap)) {
+//         const { base_token_id, counter_token_id } = JSON.parse(quoteKey);
+//         const { id, blockVersion, requiredOutputAmounts, pseudoOutputAmount } = quoteData;
+
+//         const price = requiredOutputAmounts / pseudoOutputAmount;
+
+//         const quote = { id, price };
+
+//         const quoteList = quoteToPriceMap[quoteKey] || [];
+//         quoteList.push(quote);
+
+//         quoteToPriceMap[quoteKey] = quoteList;
+//     }
+
+//     return quoteToPriceMap;
+// }
 
 function buildGetQuotesRequests() {
     const limit = 100;
@@ -320,6 +339,72 @@ function buildCurrencyPriceBuckets() {
     return currencyAmountMap;
 }
 
+function buildEmptyQuotebook() {
+    const quoteBook = {};
+    currency_config.pairs.forEach((config_pair) => {
+        const baseTokenId = config_pair.base_token_id;
+        const counterTokenId = config_pair.counter_token_id;
+        const tradingPair = getTradingPairKey(config_pair);
+        quoteBook[tradingPair] = {};
+        const bid_key = JSON.stringify(areTokensInOrder(baseTokenId, counterTokenId) ? config_pair : { base_token_id: counterTokenId, counter_token_id: baseTokenId });
+        const ask_key = JSON.stringify(areTokensInOrder(baseTokenId, counterTokenId) ? { base_token_id: counterTokenId, counter_token_id: baseTokenId } : config_pair);
+        quoteBook[tradingPair] = {
+            bid_quotes: [],
+            ask_quotes: [],
+            bid_key,
+            ask_key,
+        };
+    });
+    return quoteBook;
+}
+
+function compareQuotesByPrice(a, b) {
+    return a.requiredOutputAmounts / a.pseudoOutputAmount - b.requiredOutputAmounts / b.pseudoOutputAmount;
+}
+
+function mapPairsToQuotesAndPrices(currencyMap) {
+    const quoteToPriceMap = {};
+    console.log("Pricemap: generate pricemap");
+    for (const [quoteKey, quoteList] of currencyMap) {
+        console.log("Pricemap: inside pricemap");
+        const sortedQuoteList = quoteList.sort(compareQuotesByPrice);
+
+        const quotes = sortedQuoteList.map((quote_data) => {
+            const price = quote_data.requiredOutputAmounts.amount / quote_data.pseudoOutputAmount.amount;
+            const id = quote_data.id;
+            const amount = quote_data.pseudoOutputAmount.amount;
+            return { id, price, amount };
+        });
+
+        if (quoteToPriceMap[quoteKey]) {
+            quoteToPriceMap[quoteKey].push(...quotes);
+        } else {
+            quoteToPriceMap[quoteKey] = quotes;
+        }
+    }
+
+    return quoteToPriceMap;
+}
+
+function updateQuotebook(quoteBook, setQuoteBook, pairToPriceMap) {
+    const updatedQuoteBook = {};
+    for (let key in quoteBook) {
+        const entry = quoteBook[key];
+        const bidKey = entry.bid_key;
+        const askKey = entry.ask_key;
+        const bidQuotes = pairToPriceMap.hasOwnProperty(bidKey) ? pairToPriceMap[bidKey] : entry.bid_quotes;
+        const askQuotes = pairToPriceMap.hasOwnProperty(askKey) ? pairToPriceMap[askKey] : entry.ask_quotes;
+        const updatedEntry = {
+            ...entry,
+            bid_quotes: bidQuotes,
+            ask_quotes: askQuotes
+        };
+        updatedQuoteBook[key] = updatedEntry;
+    }
+    setQuoteBook(updatedQuoteBook);
+}
+
+
 
 function updateCurrencyMap(currencyMap, updatedBucketsMap) {
     console.log("inside update currencyMap");
@@ -364,7 +449,8 @@ function QuoteList() {
     const [intervalId, setIntervalId] = useState(null);
     const countRef = useRef(0);
     // Create a map of currency and amount pairs
-    const currencyAmountMap = buildCurrencyPriceBuckets();
+    const [currencyAmountMap, setCurrencyAmountMap] = useState(buildCurrencyPriceBuckets());
+    const [quoteBook, setQuoteBook] = useState(buildEmptyQuotebook());
 
     const handleGetQuotes = () => {
         const requests = buildGetQuotesRequests();
@@ -376,13 +462,15 @@ function QuoteList() {
         handleGetQuotes(); // call handleGetQuotes right away
         const id = setInterval(() => {
             handleGetQuotes();
-            setIntervalId(id);
             console.log("groupedQuotes content:", JSON.stringify(groupedQuotes, null, 2));
+            const pairToQuotesMap = mapPairsToQuotesAndPrices(groupedQuotes);
+            console.log("pairToQuotesMap content:", JSON.stringify(pairToQuotesMap, null, 2));
+            updateQuotebook(quoteBook, setQuoteBook, pairToQuotesMap);
+            console.log("quoteBook content", JSON.stringify(quoteBook));
             const buckets = bucketizeQuotesForAllAmounts(Amounts, groupedQuotes);
-            console.log("Buckets content:", JSON.stringify(buckets, null, 2));
             updateCurrencyMap(currencyAmountMap, buckets);
-            console.log("currencyAmountMap content:", JSON.stringify(currencyAmountMap, null, 2));    
         }, 3000);
+        setIntervalId(id);
     };
 
     const stopPolling = () => {
@@ -424,6 +512,32 @@ function QuoteList() {
                             <p>Polling is currently stopped.</p>
                         </div>
                     )}
+                    <div className="quotebook-container">
+                        {Object.keys(quoteBook).map((pair) => (
+                            <div key={pair} className="pair-container">
+                                <h2>{pair}</h2>
+                                <div className="bid-container">
+                                    <h3>Bid</h3>
+                                    {quoteBook[pair].bid_quotes.map((quote) => (
+                                        <div key={quote.id}>
+                                            <p>Price: {quote.price}</p>
+                                            <p>Amount: {quote.amount}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="ask-container">
+                                    <h3>Ask</h3>
+                                    {quoteBook[pair].ask_quotes.map((quote) => (
+                                        <div key={quote.id}>
+                                            <p>Price: {quote.price}</p>
+                                            <p>Amount: {quote.amount}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
                     <div className="item-list" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', padding: '10px' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gridGap: '10px' }}>
                             {Object.keys(currencyAmountMap).map((currency) => (
