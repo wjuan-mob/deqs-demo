@@ -49,7 +49,7 @@ root.render(
   <React.StrictMode>
     <QuoteList />
     {/* <CurrencyPairs /> */}
-    <ItemList items={items} />
+    {/* <ItemList items={items} /> */}
   </React.StrictMode>
 );
 
