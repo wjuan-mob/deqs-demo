@@ -354,6 +354,8 @@ function buildEmptyQuotebook() {
             ask_quotes: [],
             bid_key,
             ask_key,
+            bid_depth: 0,
+            ask_depth: 0,
         };
     });
     return quoteBook;
@@ -395,15 +397,32 @@ function updateQuotebook(quoteBook, setQuoteBook, pairToPriceMap) {
         const askKey = entry.ask_key;
         const bidQuotes = pairToPriceMap.hasOwnProperty(bidKey) ? pairToPriceMap[bidKey] : entry.bid_quotes;
         const askQuotes = pairToPriceMap.hasOwnProperty(askKey) ? pairToPriceMap[askKey] : entry.ask_quotes;
+        let bidDepth = entry.bid_depth;
+        let askDepth = entry.ask_depth;
+        if (pairToPriceMap.hasOwnProperty(bidKey)) {
+            bidDepth = pairToPriceMap[bidKey].reduce((acc, quote) => {
+                console.log(`bid_depth: Adding ${JSON.stringify(quote.amount)} to the accumulator`);
+                return acc + quote.amount;
+            }, 0);
+        }
+        if (pairToPriceMap.hasOwnProperty(askKey)) {
+            askDepth = pairToPriceMap[askKey].reduce((acc, quote) => acc + quote.amount, 0);
+        }
+
         const updatedEntry = {
             ...entry,
             bid_quotes: bidQuotes,
-            ask_quotes: askQuotes
+            ask_quotes: askQuotes,
+            bid_depth: bidDepth,
+            ask_depth: askDepth
         };
+        console.log(`bid_depth: updatedEntry has bid_depth ${JSON.stringify(updatedEntry.bid_depth)}`);
+
         updatedQuoteBook[key] = updatedEntry;
     }
     setQuoteBook(updatedQuoteBook);
 }
+
 
 
 
@@ -512,47 +531,42 @@ function QuoteList() {
                         {Object.keys(quoteBook).map((pair) => (
                             <div key={pair} className="pair-container">
                                 <h2>{pair}</h2>
-                                <div className="bid-container" style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', alignItems: 'center' }}>
+                                <div className="bid-container">
                                     <h3>Bid</h3>
                                     {quoteBook[pair].bid_quotes.map((quote) => (
-                                        <React.Fragment key={quote.id}>
-                                            <div className="bid-text">
-                                                <p>Amount: {quote.amount}</p>
-                                            </div>
+                                        <div key={quote.id} className="quote-container">
+                                            <div className="amount">{quote.amount}</div>
                                             <div
                                                 className="bid-bar"
                                                 style={{
-                                                    width: `${quote.amount}%`,
-                                                    backgroundColor: `rgba(46, 204, 113, ${quote.amount / 100})`,
+                                                    backgroundColor: `rgba(46, 204, 113, 0.8)`,
+                                                    width: `${(quote.amount / quoteBook[pair].bid_depth) * 100}%`,
                                                 }}
-                                            >
-                                                <p className="price">{quote.price}</p>
-                                            </div>
-                                        </React.Fragment>
+                                            />
+                                            <div className="price">{quote.price}</div>
+                                        </div>
                                     ))}
                                 </div>
-                                <div className="ask-container" style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center' }}>
+                                <div className="ask-container">
                                     <h3>Ask</h3>
                                     {quoteBook[pair].ask_quotes.map((quote) => (
-                                        <React.Fragment key={quote.id}>
+                                        <div key={quote.id} className="quote-container">
+                                            <div className="amount">{quote.amount}</div>
                                             <div
                                                 className="ask-bar"
                                                 style={{
-                                                    width: `${quote.amount}%`,
-                                                    backgroundColor: `rgba(231, 76, 60, ${quote.amount / 100})`,
+                                                    backgroundColor: `rgba(231, 76, 60, 0.8)`,
+                                                    width: `${(quote.amount / quoteBook[pair].ask_depth) * 100}%`,
                                                 }}
-                                            >
-                                                <p className="price">{quote.price}</p>
-                                            </div>
-                                            <div className="ask-text">
-                                                <p>Amount: {quote.amount}</p>
-                                            </div>
-                                        </React.Fragment>
+                                            />
+                                            <div className="price">{quote.price}</div>
+                                        </div>
                                     ))}
                                 </div>
                             </div>
                         ))}
                     </div>
+
 
 
 
