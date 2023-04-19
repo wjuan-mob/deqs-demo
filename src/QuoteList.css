@@ -101,11 +101,11 @@
 .amounts-column,
 .prices-column {
   display: flex;
+  flex-direction: column;
   justify-content: space-between;
 }
 
 .amounts-column {
-  flex-direction: column;
   align-items: flex-start;
 }
 
@@ -133,4 +133,16 @@
 
 .ask-depth {
   color: red;
+}
+
+/* Additional styles for price display */
+.price-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.price-value {
+  font-size: 18px; /* You can adjust the font size as needed */
+  color: #fff; /* You can adjust the color as needed */
 }

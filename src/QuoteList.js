@@ -479,84 +479,103 @@ function QuoteList() {
     // Define a separate component for QuoteBook
     const QuoteBook = ({ quoteBook }) => {
         return (
-            <div className="quotebook-container white-text">
-                {Object.keys(quoteBook).map((pair) => (
-                    <div key={pair} className="pair-container">
-                        <div className="pair-header">
-                            <h2>{pair}</h2>
-                            <div className="total-depth-container">
-                                <div className="total-depth-header">Total Depth</div>
-                                <div className="bid-depth">{quoteBook[pair].bid_depth}</div>
-                                <div className="ask-depth">{quoteBook[pair].ask_depth}</div>
-                            </div>
-                        </div>
-                        <div className="bid-container">
-                            <div className="quote-header">
-                                <div className="amount-header">Amount</div>
-                                <div className="price-header">Price</div>
-                            </div>
-                            <div className="quotes-container">
-                                <div className="amounts-column">
-                                    {quoteBook[pair].bid_quotes.map((quote) => (
-                                        <div key={quote.id} className="amount-container">
-                                            <div className="amount-bar-container">
-                                                <div className="amount-header">{quote.amount}</div>
-                                                <div
-                                                    className="bid-bar"
-                                                    style={{
-                                                        "--bar-width": `${(quote.amount / quoteBook[pair].bid_depth) * 100}%`,
-                                                    }}
-                                                >
-                                                    <div className="amount">{quote.amount}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="prices-column">
-                                    {quoteBook[pair].bid_quotes.map((quote) => (
-                                        <div key={quote.id} className="price-container">
-                                            <div className="price">{quote.price}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                        <div className="ask-container">
-                            <div className="quote-header">
-                                <div className="amount-header">Amount</div>
-                                <div className="price-header">Price</div>
-                            </div>
-                            <div className="quotes-container">
-                                <div className="amounts-column">
-                                    {quoteBook[pair].ask_quotes.map((quote) => (
-                                        <div key={quote.id} className="amount-container">
-                                            <div className="amount-bar-container">
-                                                <div className="amount-header">{quote.amount}</div>
-                                                <div
-                                                    className="ask-bar"
-                                                    style={{
-                                                        "--bar-width": `${(quote.amount / quoteBook[pair].ask_depth) * 100}%`,
-                                                    }}
-                                                >
-                                                    <div className="amount">{quote.amount}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="prices-column">
-                                    {quoteBook[pair].ask_quotes.map((quote) => (
-                                        <div key={quote.id} className="price-container">
-                                            <div className="price">{quote.price}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
+<div className="quotebook-container white-text">
+  {Object.keys(quoteBook).map((pair) => (
+    <div key={pair} className="pair-container">
+      <div className="pair-header">
+        <h2>{pair}</h2>
+        <div className="total-depth-container">
+          <div className="total-depth-header">Total Depth</div>
+          <div className="bid-depth">{quoteBook[pair].bid_depth}</div>
+          <div className="ask-depth">{quoteBook[pair].ask_depth}</div>
+        </div>
+      </div>
+      <div className="bid-container">
+        <div className="quote-header">
+          <div className="amount-header">Amount</div>
+          <div className="price-header">Price</div>
+        </div>
+        <div className="quotes-container">
+          <div className="amounts-column">
+            {quoteBook[pair].bid_quotes.map((quote) => (
+              <div key={quote.id} className="amount-container">
+                <div className="amount-bar-container">
+                  <div className="amount-header">
+                    <div
+                      className="amount-tooltip"
+                      title={quote.amount} // Set amount as tooltip
+                    >
+                      &nbsp;
                     </div>
-                ))}
-            </div>
+                  </div>
+                  <div
+                    className="bid-bar"
+                    style={{
+                      "--bar-width": `${(quote.amount / quoteBook[pair].bid_depth) * 100}%`,
+                    }}
+                  >
+                    <div className="amount">{quote.amount}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="prices-column">
+            {quoteBook[pair].bid_quotes.map((quote) => (
+              <div key={quote.id} className="price-container">
+                <div className="price-tooltip" title={quote.price}>
+                  {quote.price}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="ask-container">
+        <div className="quote-header">
+          <div className="amount-header">Amount</div>
+          <div className="price-header">Price</div>
+        </div>
+        <div className="quotes-container">
+          <div className="amounts-column">
+            {quoteBook[pair].ask_quotes.map((quote) => (
+              <div key={quote.id} className="amount-container">
+                <div className="amount-bar-container">
+                  <div className="amount-header">
+                    <div
+                      className="amount-tooltip"
+                      title={quote.amount} // Set amount as tooltip
+                    >
+                      &nbsp;
+                    </div>
+                  </div>
+                  <div
+                    className="ask-bar"
+                    style={{
+                      "--bar-width": `${(quote.amount / quoteBook[pair].ask_depth) * 100}%`,
+                    }}
+                  >
+                    <div className="amount">{quote.amount}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="prices-column">
+            {quoteBook[pair].ask_quotes.map((quote) => (
+              <div key={quote.id} className="price-container">
+                <div className="price-tooltip" title={quote.price}>
+                  {quote.price}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  ))}
+</div>
+
 
 
         );
