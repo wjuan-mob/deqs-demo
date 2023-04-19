@@ -1,137 +1,136 @@
 :root {
-    --bid-bar-color: rgba(46, 204, 113, 0.8);
-    --ask-bar-color: rgba(231, 76, 60, 0.8);
-  }
-  
-  .quote-container {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px;
-    background-color: transparent;
-  }
-  
-  .pair-container {
-    display: flex;
-    flex-direction: row;
-    background-color: #444;
-    border-radius: 5px;
-    padding: 10px;
-    height: 250px;
-    overflow-y: auto;
-    flex: 0 0 calc(25% - 20px);
-    margin: 10px;
-  }
-  
-  .pair-container h2 {
-    color: #fff;
-    margin-right: 20px;
-  }
-  
-  .quotebook-container div p {
-    color: #fff;
-  }
-  
-  .item-group {
-    background-color: #fff;
-    border-radius: 5px;
-    padding: 10px;
-  }
-  
-  .item-group h2 {
-    color: #333;
-  }
-  
-  .item-group div {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px;
-    background-color: transparent;
-  }
-  
-  .item-group div>div {
-    padding: 10px;
-    border-radius: 5px;
-  }
-  
-  .item-group div>div h3 {
-    margin: 0;
-    color: #fff;
-  }
-  
-  .item-group div>div p {
-    margin: 0;
-  }
-  
-  .bid-box {
-    padding: 10px;
-  }
-  
-  .ask-box {
-    padding: 10px;
-  }
-  
-  .bid-container::before,
-  .ask-container::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    z-index: -1;
-  }
-  
-  .bid-text,
-  .ask-text {
-    justify-self: end;
-    padding-right: 10px;
-  }
-  
-  .ask-text {
-    justify-self: start;
-    padding-left: 10px;
-  }
-  
-  .bid-bar {
-    height: 15px;
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    padding-right: 5px;
-    max-width: 100%;
-    position: relative;
-    --bar-width: 0%;
-  }
-  
-  .bid-bar::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    right: 0;
-    background-color: var(--bid-bar-color);
-    width: var(--bar-width);
-  }
-  
-  .ask-bar {
-    height: 15px;
-    display: flex;
-    justify-content: flex-start;
-    align-items: center;
-    padding-left: 5px;
-    max-width: 100%;
-    position: relative;
-    --bar-width: 0%;
-  }
-  
-  .ask-bar::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    background-color: var(--ask-bar-color);
-    width: var(--bar-width);
-  }
-  
+  --bid-bar-color: rgba(46, 204, 113, 0.8);
+  --ask-bar-color: rgba(231, 76, 60, 0.8);
+}
+
+.quote-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  background-color: transparent;
+}
+
+.pair-container {
+  display: flex;
+  flex-direction: row;
+  background-color: #444;
+  border-radius: 5px;
+  padding: 10px;
+  height: 250px;
+  overflow-y: auto;
+  margin: 10px;
+}
+
+.pair-container h2 {
+  color: #fff;
+  margin-right: 20px;
+}
+
+.bid-box,
+.ask-box,
+.total-depth-box {
+  padding: 10px;
+  flex: 1;
+}
+
+.bid-container,
+.ask-container,
+.total-depth-container {
+  position: relative;
+}
+
+.bid-text,
+.ask-text,
+.total-depth-text {
+  padding-right: 10px;
+}
+
+.bid-text,
+.total-depth-text {
+  justify-self: end;
+}
+
+.ask-text {
+  justify-self: start;
+}
+
+.bid-bar,
+.ask-bar {
+  height: 15px;
+  display: flex;
+  align-items: center;
+  max-width: 100%;
+  position: relative;
+}
+
+.bid-bar::before,
+.ask-bar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--bar-width);
+}
+
+.bid-bar::before {
+  right: 0;
+  background-color: var(--bid-bar-color);
+}
+
+.ask-bar::before {
+  left: 0;
+  background-color: var(--ask-bar-color);
+}
+
+.total-depth-text {
+  justify-self: center;
+}
+
+.quote-header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.amount-header,
+.price-header,
+.total-depth {
+  flex-basis: 33%;
+}
+
+.amounts-column,
+.prices-column {
+  display: flex;
+  justify-content: space-between;
+}
+
+.amounts-column {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.amount-container,
+.price-container {
+  width: 100%;
+}
+
+.total-depth-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f8f8;
+  border-radius: 5px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  flex-direction: column;
+  align-items: center;
+}
+
+.bid-depth {
+  color: green;
+}
+
+.ask-depth {
+  color: red;
+}

@@ -482,17 +482,20 @@ function QuoteList() {
             <div className="quotebook-container white-text">
                 {Object.keys(quoteBook).map((pair) => (
                     <div key={pair} className="pair-container">
-                        <h2>{pair}</h2>
+                        <div className="pair-header">
+                            <h2>{pair}</h2>
+                            <div className="total-depth-container">
+                                <div className="total-depth-header">Total Depth</div>
+                                <div className="bid-depth">{quoteBook[pair].bid_depth}</div>
+                                <div className="ask-depth">{quoteBook[pair].ask_depth}</div>
+                            </div>
+                        </div>
                         <div className="bid-container">
                             <div className="quote-header">
-                                <div className="amount-header">Total Depth</div>
                                 <div className="amount-header">Amount</div>
                                 <div className="price-header">Price</div>
                             </div>
                             <div className="quotes-container">
-                                <div className="total-depth-column">
-                                    <div className="total-depth">{quoteBook[pair].bid_depth}</div>
-                                </div>
                                 <div className="amounts-column">
                                     {quoteBook[pair].bid_quotes.map((quote) => (
                                         <div key={quote.id} className="amount-container">
@@ -523,7 +526,6 @@ function QuoteList() {
                             <div className="quote-header">
                                 <div className="amount-header">Amount</div>
                                 <div className="price-header">Price</div>
-                                <div className="amount-header">Total Depth</div>
                             </div>
                             <div className="quotes-container">
                                 <div className="amounts-column">
@@ -550,14 +552,12 @@ function QuoteList() {
                                         </div>
                                     ))}
                                 </div>
-                                <div className="total-depth-column">
-                                    <div className="total-depth">{quoteBook[pair].ask_depth}</div>
-                                </div>
                             </div>
                         </div>
                     </div>
                 ))}
             </div>
+
 
         );
     };
