@@ -14,12 +14,6 @@ const { PingRequest, PongResponse } = require('./deqs_pb.js');
 
 const Amounts = [0, 1, 2, 3, 4, 5];
 
-const currencyPriority = [
-    { name: "GBP", tokenId: 0 },
-    { name: "EUR", tokenId: 1 },
-    { name: "USD", tokenId: 2 }
-];
-
 const enableDevTools = window.__GRPCWEB_DEVTOOLS__ || (() => {
 });
 
@@ -182,26 +176,6 @@ export function ItemList({ items }) {
     );
 };
 
-// function generateQuoteToPriceMap(currencyMap) {
-//     const quoteToPriceMap = {};
-
-//     for (const [quoteKey, quoteData] of Object.entries(currencyMap)) {
-//         const { base_token_id, counter_token_id } = JSON.parse(quoteKey);
-//         const { id, blockVersion, requiredOutputAmounts, pseudoOutputAmount } = quoteData;
-
-//         const price = requiredOutputAmounts / pseudoOutputAmount;
-
-//         const quote = { id, price };
-
-//         const quoteList = quoteToPriceMap[quoteKey] || [];
-//         quoteList.push(quote);
-
-//         quoteToPriceMap[quoteKey] = quoteList;
-//     }
-
-//     return quoteToPriceMap;
-// }
-
 function buildGetQuotesRequests() {
     const limit = 100;
     const requests = [];
@@ -243,7 +217,6 @@ function buildGetQuotesRequests() {
     console.log(`Distinct pairs: ${Array.from(distinctPairs).join(", ")}`); // Log the distinct pairs
     return requests;
 }
-
 
 function handleGetQuotesResponse(response, setQuotesMap, countRef) {
     const newQuotesData = new Map();
@@ -296,10 +269,6 @@ function handleGetQuotesResponse(response, setQuotesMap, countRef) {
     });
     countRef.current++; // Increment the count
 }
-
-
-
-
 
 function sendGetQuotesRequests(client, requests, setQuotesMap, countRef) {
     requests.forEach(({ request, baseTokenId, counterTokenId }) => {
@@ -423,9 +392,6 @@ function updateQuotebook(quoteBook, setQuoteBook, pairToPriceMap) {
     setQuoteBook(updatedQuoteBook);
 }
 
-
-
-
 function updateCurrencyMap(currencyMap, setCurrencyAmountMap, updatedBucketsMap) {
     const updatedCurrencyMap = {};
     for (let key in currencyMap) {
@@ -460,8 +426,6 @@ function updateCurrencyMap(currencyMap, setCurrencyAmountMap, updatedBucketsMap)
     }
     setCurrencyAmountMap(updatedCurrencyMap);
 }
-
-
 
 function QuoteList() {
     const [groupedQuotes, setQuotesMap] = useState(new Map());
@@ -616,42 +580,41 @@ function QuoteList() {
         );
     };
     return (
-        < div className = "App" >
-        <header className="App-header">
-            <img src={logo} className="App-logo" alt="logo" style={{ width: '100px', height: '100px' }} />
-            <div>
-                <p>Number of different groups: {groupedQuotes.size}</p>
-                {intervalId ? (
-                    <button onClick={stopPolling}>Stop Polling</button>
-                ) : (
-                    <button onClick={startPolling}>Start Polling</button>
-                )}
-                {intervalId ? (
-                    <div>
-                        <p>Polling is currently running...</p>
-                    </div>
-                ) : (
-                    <div>
-                        <p>Polling is currently stopped.</p>
-                    </div>
-                )}
-
-                {/* Render tab navigation */}
+        < div className="App" >
+            <header className="App-header">
+                <img src={logo} className="App-logo" alt="logo" style={{ width: '100px', height: '100px' }} />
                 <div>
-                    <button onClick={() => handleTabChange('quoteBook')}>Quote Book</button>
-                    <button onClick={() => handleTabChange('itemList')}>Item List</button>
-                </div>
+                    <p>Number of different groups: {groupedQuotes.size}</p>
+                    {intervalId ? (
+                        <button onClick={stopPolling}>Stop Polling</button>
+                    ) : (
+                        <button onClick={startPolling}>Start Polling</button>
+                    )}
+                    {intervalId ? (
+                        <div>
+                            <p>Polling is currently running...</p>
+                        </div>
+                    ) : (
+                        <div>
+                            <p>Polling is currently stopped.</p>
+                        </div>
+                    )}
 
-                {/* Render content based on active tab */}
-                {activeTab === 'quoteBook' && <QuoteBook quoteBook={quoteBook} />}
-                {activeTab === 'itemList' && <ItemList currencyAmountMap={currencyAmountMap} />}
-            </div>
-        </header>
-      </div >
+                    {/* Render tab navigation */}
+                    <div>
+                        <button onClick={() => handleTabChange('quoteBook')}>Quote Book</button>
+                        <button onClick={() => handleTabChange('itemList')}>Item List</button>
+                    </div>
+
+                    {/* Render content based on active tab */}
+                    {activeTab === 'quoteBook' && <QuoteBook quoteBook={quoteBook} />}
+                    {activeTab === 'itemList' && <ItemList currencyAmountMap={currencyAmountMap} />}
+                </div>
+            </header>
+        </div >
 
     );
 }
-
 
 export function CurrencyPairs() {
     return (
