@@ -1,8 +1,8 @@
 
 const currencyPriority = [
-    { name: "GBP", tokenId: 0 },
-    { name: "EUR", tokenId: 1 },
-    { name: "USD", tokenId: 2 }
+    { name: "GBP(Mob)", tokenId: 0 },
+    { name: "EUR(eUsd)", tokenId: 1 },
+    { name: "USD(fMob)", tokenId: 8192 }
 ];
 
 const areTokensInOrder = (token1, token2, priority = currencyPriority) => {

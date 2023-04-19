@@ -6,7 +6,11 @@
         },
         {
             "base_token_id": 1,
-            "counter_token_id": 2
+            "counter_token_id": 8192
+        },
+        {
+            "base_token_id": 0,
+            "counter_token_id": 8192
         }
     ]
 }
