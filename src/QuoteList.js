@@ -466,6 +466,11 @@ function updateCurrencyMap(currencyMap, setCurrencyAmountMap, updatedBucketsMap)
 function QuoteList() {
     const [groupedQuotes, setQuotesMap] = useState(new Map());
     const [intervalId, setIntervalId] = useState(null);
+    const [activeTab, setActiveTab] = useState('quoteBook'); // State to track active tab
+
+    const handleTabChange = (tab) => {
+        setActiveTab(tab);
+    };
     const countRef = useRef(0);
     // Create a map of currency and amount pairs
     const [currencyAmountMap, setCurrencyAmountMap] = useState(buildCurrencyPriceBuckets());
@@ -506,135 +511,143 @@ function QuoteList() {
             }
         };
     }, []);
-    return (
-        <div className="App">
-            <header className="App-header">
-                <img src={logo} className="App-logo" alt="logo" style={{ width: '100px', height: '100px' }} />
-                <div>
-                    <p>Number of different groups: {groupedQuotes.size}</p>
-                    {intervalId ? (
-                        <button onClick={stopPolling}>Stop Polling</button>
-                    ) : (
-                        <button onClick={startPolling}>Start Polling</button>
-                    )}
-                    {intervalId ? (
-                        <div>
-                            <p>Polling is currently running...</p>
-                        </div>
-                    ) : (
-                        <div>
-                            <p>Polling is currently stopped.</p>
-                        </div>
-                    )}
-
-                    <div className="quotebook-container white-text">
-                        {Object.keys(quoteBook).map((pair) => (
-                            <div key={pair} className="pair-container">
-                                <h2>{pair}</h2>
-                                <div className="bid-container">
-                                    <h3>Bid</h3>
-                                    <div className="quote-header">
-                                        <div className="amount-header">Amount</div>
-                                        <div className="price-header">Price</div>
-                                    </div>
-                                    <div className="quotes-container">
-                                        <div className="amounts-column">
-                                            {quoteBook[pair].bid_quotes.map((quote) => (
-                                                <div key={quote.id} className="amount-container">
-                                                    <div className="amount-bar-container">
-                                                        <div className="amount-header">{quote.amount}</div>
-                                                        <div
-                                                            className="bid-bar"
-                                                            style={{
-                                                                "--bar-width": `${(quote.amount / quoteBook[pair].bid_depth) * 100}%`,
-                                                            }}
-                                                        >
-                                                            <div className="amount">{quote.amount}</div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div className="prices-column">
-                                            {quoteBook[pair].bid_quotes.map((quote) => (
-                                                <div key={quote.id} className="price-container">
-                                                    <div className="price">{quote.price}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="ask-container">
-                                    <h3>Ask</h3>
-                                    <div className="quote-header">
-                                        <div className="amount-header">Amount</div>
-                                        <div className="price-header">Price</div>
-                                    </div>
-                                    <div className="quotes-container">
-                                        <div className="amounts-column">
-                                            {quoteBook[pair].ask_quotes.map((quote) => (
-                                                <div key={quote.id} className="amount-container">
-                                                    <div className="amount-bar-container">
-                                                        <div className="amount-header">{quote.amount}</div>
-                                                        <div
-                                                            className="ask-bar"
-                                                            style={{
-                                                                "--bar-width": `${(quote.amount / quoteBook[pair].ask_depth) * 100}%`,
-                                                            }}
-                                                        >
-                                                            <div className="amount">{quote.amount}</div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div className="prices-column">
-                                            {quoteBook[pair].ask_quotes.map((quote) => (
-                                                <div key={quote.id} className="price-container">
-                                                    <div className="price">{quote.price}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
+    // Define a separate component for QuoteBook
+    const QuoteBook = ({ quoteBook }) => {
+        return (
+            <div className="quotebook-container white-text">
+                {Object.keys(quoteBook).map((pair) => (
+                    <div key={pair} className="pair-container">
+                        <h2>{pair}</h2>
+                        <div className="bid-container">
+                            <h3>Bid</h3>
+                            <div className="quote-header">
+                                <div className="amount-header">Amount</div>
+                                <div className="price-header">Price</div>
                             </div>
-                        ))}
-                    </div>
-
-
-
-
-
-
-
-
-
-
-                    <div className="item-list" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', padding: '10px' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gridGap: '10px' }}>
-                            {Object.keys(currencyAmountMap).map((currency) => (
-                                <div key={currency} className="item-group" style={{ backgroundColor: 'white', borderRadius: '5px', padding: '10px' }}>
-                                    <h2>{currency}</h2>
-                                    {Object.keys(currencyAmountMap[currency]).map((amount) => (
-                                        <div key={amount} style={{ ...truncatedStyle, ...smallTextStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', backgroundColor: 'transparent' }}>
-                                            <div style={{ backgroundColor: 'rgba(120, 220, 140, 0.8)', padding: '10px', borderRadius: '5px' }}>
-                                                <h3>Bid</h3>
-                                                <div>{renderItemName(currencyAmountMap[currency][amount].bid)}</div>
-                                            </div>
-                                            <div style={{ fontSize: '24px', margin: '0 10px' }}>{amount}</div>
-                                            <div style={{ backgroundColor: 'rgba(220, 120, 140, 0.8)', padding: '10px', borderRadius: '5px' }}>
-                                                <h3>Ask</h3>
-                                                <div>{renderItemName(currencyAmountMap[currency][amount].ask)}</div>
+                            <div className="quotes-container">
+                                <div className="amounts-column">
+                                    {quoteBook[pair].bid_quotes.map((quote) => (
+                                        <div key={quote.id} className="amount-container">
+                                            <div className="amount-bar-container">
+                                                <div className="amount-header">{quote.amount}</div>
+                                                <div
+                                                    className="bid-bar"
+                                                    style={{
+                                                        "--bar-width": `${(quote.amount / quoteBook[pair].bid_depth) * 100}%`,
+                                                    }}
+                                                >
+                                                    <div className="amount">{quote.amount}</div>
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
-                            ))}
+                                <div className="prices-column">
+                                    {quoteBook[pair].bid_quotes.map((quote) => (
+                                        <div key={quote.id} className="price-container">
+                                            <div className="price">{quote.price}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="ask-container">
+                            <h3>Ask</h3>
+                            <div className="quote-header">
+                                <div className="amount-header">Amount</div>
+                                <div className="price-header">Price</div>
+                            </div>
+                            <div className="quotes-container">
+                                <div className="amounts-column">
+                                    {quoteBook[pair].ask_quotes.map((quote) => (
+                                        <div key={quote.id} className="amount-container">
+                                            <div className="amount-bar-container">
+                                                <div className="amount-header">{quote.amount}</div>
+                                                <div
+                                                    className="ask-bar"
+                                                    style={{
+                                                        "--bar-width": `${(quote.amount / quoteBook[pair].ask_depth) * 100}%`,
+                                                    }}
+                                                >
+                                                    <div className="amount">{quote.amount}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="prices-column">
+                                    {quoteBook[pair].ask_quotes.map((quote) => (
+                                        <div key={quote.id} className="price-container">
+                                            <div className="price">{quote.price}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     </div>
+                ))}
+            </div>
+        );
+    };
+    const ItemList = ({ currencyAmountMap }) => {
+        return (
+            <div className="item-list" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', padding: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gridGap: '10px' }}>
+                    {Object.keys(currencyAmountMap).map((currency) => (
+                        <div key={currency} className="item-group" style={{ backgroundColor: 'white', borderRadius: '5px', padding: '10px' }}>
+                            <h2>{currency}</h2>
+                            {Object.keys(currencyAmountMap[currency]).map((amount) => (
+                                <div key={amount} style={{ ...truncatedStyle, ...smallTextStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', backgroundColor: 'transparent' }}>
+                                    <div style={{ backgroundColor: 'rgba(120, 220, 140, 0.8)', padding: '10px', borderRadius: '5px' }}>
+                                        <h3>Bid</h3>
+                                        <div>{renderItemName(currencyAmountMap[currency][amount].bid)}</div>
+                                    </div>
+                                    <div style={{ fontSize: '24px', margin: '0 10px' }}>{amount}</div>
+                                    <div style={{ backgroundColor: 'rgba(220, 120, 140, 0.8)', padding: '10px', borderRadius: '5px' }}>
+                                        <h3>Ask</h3>
+                                        <div>{renderItemName(currencyAmountMap[currency][amount].ask)}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ))}
                 </div>
-            </header>
-        </div>
+            </div>
+        );
+    };
+    return (
+        < div className = "App" >
+        <header className="App-header">
+            <img src={logo} className="App-logo" alt="logo" style={{ width: '100px', height: '100px' }} />
+            <div>
+                <p>Number of different groups: {groupedQuotes.size}</p>
+                {intervalId ? (
+                    <button onClick={stopPolling}>Stop Polling</button>
+                ) : (
+                    <button onClick={startPolling}>Start Polling</button>
+                )}
+                {intervalId ? (
+                    <div>
+                        <p>Polling is currently running...</p>
+                    </div>
+                ) : (
+                    <div>
+                        <p>Polling is currently stopped.</p>
+                    </div>
+                )}
+
+                {/* Render tab navigation */}
+                <div>
+                    <button onClick={() => handleTabChange('quoteBook')}>Quote Book</button>
+                    <button onClick={() => handleTabChange('itemList')}>Item List</button>
+                </div>
+
+                {/* Render content based on active tab */}
+                {activeTab === 'quoteBook' && <QuoteBook quoteBook={quoteBook} />}
+                {activeTab === 'itemList' && <ItemList currencyAmountMap={currencyAmountMap} />}
+            </div>
+        </header>
+      </div >
 
     );
 }
