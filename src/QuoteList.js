@@ -455,6 +455,7 @@ function QuoteList() {
             console.log("pairToQuotesMap content:", JSON.stringify(pairToQuotesMap, null, 2));
             updateQuotebook(quoteBook, setQuoteBook, pairToQuotesMap);
             console.log("quoteBook content", JSON.stringify(quoteBook));
+
             const buckets = bucketizeQuotesForAllAmounts(Amounts, groupedQuotes);
             updateCurrencyMap(currencyAmountMap, setCurrencyAmountMap, buckets);
         }, 3000);
@@ -483,12 +484,15 @@ function QuoteList() {
                     <div key={pair} className="pair-container">
                         <h2>{pair}</h2>
                         <div className="bid-container">
-                            <h3>Bid</h3>
                             <div className="quote-header">
+                                <div className="amount-header">Total Depth</div>
                                 <div className="amount-header">Amount</div>
                                 <div className="price-header">Price</div>
                             </div>
                             <div className="quotes-container">
+                                <div className="total-depth-column">
+                                    <div className="total-depth">{quoteBook[pair].bid_depth}</div>
+                                </div>
                                 <div className="amounts-column">
                                     {quoteBook[pair].bid_quotes.map((quote) => (
                                         <div key={quote.id} className="amount-container">
@@ -516,10 +520,10 @@ function QuoteList() {
                             </div>
                         </div>
                         <div className="ask-container">
-                            <h3>Ask</h3>
                             <div className="quote-header">
                                 <div className="amount-header">Amount</div>
                                 <div className="price-header">Price</div>
+                                <div className="amount-header">Total Depth</div>
                             </div>
                             <div className="quotes-container">
                                 <div className="amounts-column">
@@ -546,11 +550,15 @@ function QuoteList() {
                                         </div>
                                     ))}
                                 </div>
+                                <div className="total-depth-column">
+                                    <div className="total-depth">{quoteBook[pair].ask_depth}</div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 ))}
             </div>
+
         );
     };
     const ItemList = ({ currencyAmountMap }) => {
