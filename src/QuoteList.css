@@ -3,8 +3,23 @@
   --ask-bar-color: rgba(231, 76, 60, 0.8);
 }
 
+.total-depth-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f8f8;
+  border-radius: 5px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  flex-direction: column;
+  align-items: center;
+}
+
+
 .quote-container {
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: space-between;
   padding: 10px;
@@ -37,23 +52,10 @@
 .bid-container,
 .ask-container,
 .total-depth-container {
-  position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
-.bid-text,
-.ask-text,
-.total-depth-text {
-  padding-right: 10px;
-}
-
-.bid-text,
-.total-depth-text {
-  justify-self: end;
-}
-
-.ask-text {
-  justify-self: start;
-}
 
 .bid-bar,
 .ask-bar {
@@ -90,42 +92,10 @@
 .quote-header {
   display: flex;
   justify-content: space-between;
+  gap: 16px;
 }
 
-.amount-header,
-.price-header,
-.total-depth {
-  flex-basis: 33%;
-}
 
-.amounts-column,
-.prices-column {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.amounts-column {
-  align-items: flex-start;
-}
-
-.amount-container,
-.price-container {
-  width: 100%;
-}
-
-.total-depth-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #f8f8f8;
-  border-radius: 5px;
-  margin-top: 10px;
-  margin-bottom: 10px;
-  overflow: hidden;
-  flex-direction: column;
-  align-items: center;
-}
 
 .bid-depth {
   color: green;
@@ -135,14 +105,8 @@
   color: red;
 }
 
-/* Additional styles for price display */
-.price-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
 
-.price-value {
-  font-size: 18px; /* You can adjust the font size as needed */
-  color: #fff; /* You can adjust the color as needed */
+.bid-ask-wrapper {
+  display: flex;
+  gap: 16px; /* Adjust this value to your desired spacing */
 }
