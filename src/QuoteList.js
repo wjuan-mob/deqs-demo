@@ -500,19 +500,18 @@ function QuoteList() {
                                                 p{quote.price}
                                             </div>
                                             <div className="amount-bar-container">
+
                                                 <div
-                                                    className="amount-tooltip"
                                                     title={quote.amount} // Set amount as tooltip
+
+                                                    className="bid-bar"
+                                                    style={{
+                                                        "--bar-width": `${(quote.amount / quoteBook[pair].bid_depth) * 100}%`,
+                                                    }}
                                                 >
-                                                    <div
-                                                        className="bid-bar"
-                                                        style={{
-                                                            "--bar-width": `${(quote.amount / quoteBook[pair].bid_depth) * 100}%`,
-                                                        }}
-                                                    >
-                                                    </div>
                                                 </div>
                                             </div>
+
                                         </div>
                                     ))}
 
@@ -527,21 +526,17 @@ function QuoteList() {
                                     {quoteBook[pair].ask_quotes.map((quote) => (
                                         <div key={quote.id} className="amount-container">
                                             <div className="amount-bar-container">
-                                                <div
-                                                    className="amount-tooltip"
-                                                    title={quote.amount} // Set amount as tooltip
-                                                >
-                                                    <div
-                                                        className="ask-bar"
-                                                        style={{
-                                                            "--bar-width": `${(quote.amount / quoteBook[pair].ask_depth) * 100}%`,
-                                                        }}
-                                                    >
-                                                    </div>
-                                                    <div className="price-tooltip" title={quote.price}>
-                                                        p{quote.price}
-                                                    </div>
 
+                                                <div
+                                                    className="ask-bar"
+                                                    title={quote.amount}
+                                                    style={{
+                                                        "--bar-width": `${(quote.amount / quoteBook[pair].ask_depth) * 100}%`,
+                                                    }}
+                                                >
+                                                </div>
+                                                <div className="price-tooltip" title={quote.price}>
+                                                    p{quote.price}
                                                 </div>
                                             </div>
                                         </div>
