@@ -3,6 +3,27 @@
   --ask-bar-color: rgba(231, 76, 60, 0.8);
 }
 
+.quotes-container {
+  display: flex;
+  flex-direction: column;
+  border-radius: 15px;
+  gap: 6px;
+  
+}
+
+.quote-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+  width: 300px;
+}
+.bar-wrapper {
+  align-items: center;
+  justify-content: space-between;
+  width: 200px;
+}
+
 .total-depth-container {
   display: flex;
   align-items: center;
@@ -16,16 +37,6 @@
   align-items: center;
 }
 
-
-.quote-container {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px;
-  background-color: transparent;
-}
-
 .pair-container {
   display: flex;
   flex-direction: row;
@@ -35,6 +46,7 @@
   height: 250px;
   overflow-y: auto;
   margin: 10px;
+  gap: 15px;
 }
 
 .pair-container h2 {
@@ -109,4 +121,9 @@
 .bid-ask-wrapper {
   display: flex;
   gap: 16px; /* Adjust this value to your desired spacing */
+}
+
+.quote-header {
+  font-size: 20px;
+  font-weight: bold;
 }

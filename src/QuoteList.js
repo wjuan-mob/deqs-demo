@@ -495,14 +495,14 @@ function QuoteList() {
                                 </div>
                                 <div className="quotes-container">
                                     {quoteBook[pair].bid_quotes.map((quote) => (
-                                        <div key={quote.id} className="amount-container">
-                                            <div className="price-tooltip" title={quote.price}>
+                                        <div key={quote.id} className="quote-container">
+                                            <div className="price" title={quote.price}>
                                                 p{quote.price}
                                             </div>
-                                            <div className="amount-bar-container">
+                                            <div className="bar-wrapper">
 
                                                 <div
-                                                    title={quote.amount} // Set amount as tooltip
+                                                    title={quote.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
 
                                                     className="bid-bar"
                                                     style={{
@@ -511,7 +511,6 @@ function QuoteList() {
                                                 >
                                                 </div>
                                             </div>
-
                                         </div>
                                     ))}
 
@@ -524,21 +523,21 @@ function QuoteList() {
                                 </div>
                                 <div className="quotes-container">
                                     {quoteBook[pair].ask_quotes.map((quote) => (
-                                        <div key={quote.id} className="amount-container">
-                                            <div className="amount-bar-container">
-
+                                        <div key={quote.id} className="quote-container">
+                                            <div className="bar-wrapper">
                                                 <div
                                                     className="ask-bar"
-                                                    title={quote.amount}
+                                                    title={quote.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
                                                     style={{
                                                         "--bar-width": `${(quote.amount / quoteBook[pair].ask_depth) * 100}%`,
                                                     }}
                                                 >
                                                 </div>
-                                                <div className="price-tooltip" title={quote.price}>
-                                                    p{quote.price}
-                                                </div>
                                             </div>
+                                            <div className="price" title={quote.price}>
+                                                p{quote.price}
+                                            </div>
+
                                         </div>
                                     ))}
                                 </div>
